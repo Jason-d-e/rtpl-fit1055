@@ -56,6 +56,9 @@ code{font-family:var(--mono);font-size:.88em}
 .btn-quiet:hover{background:var(--surface)}
 .btn-on-dark{background:transparent;color:#fff;border-color:rgba(255,255,255,.55)}
 .btn-on-dark:hover{background:rgba(255,255,255,.1)}
+.btn-lang{min-width:84px}
+.topnote+.btn-lang{margin-left:0}
+html[lang=zh] body{font-family:var(--font),"Microsoft YaHei","PingFang SC","Noto Sans CJK SC",sans-serif}
 .btn-small{min-height:34px;padding:6px 12px;font-size:.85rem}
 .btn-block{width:100%;margin-top:12px}
 .btn[disabled]{opacity:.45;cursor:not-allowed}
@@ -191,7 +194,18 @@ main:focus{outline:none}
 
 .effects{background:var(--surface);border-radius:var(--radius);padding:14px 22px 10px;margin-top:12px}
 .effects h3{margin-top:0}
-.effect{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-top:1px solid var(--line-soft)}
+.effect{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:8px 0;border-top:1px solid var(--line-soft)}
+.effect-name{display:block}
+.effect-info{display:block;font-size:.78rem;color:var(--muted);line-height:1.3}
+.effects-note{margin:8px 0 2px}
+.glossary{background:var(--surface);border-radius:var(--radius);padding:10px 18px;margin-top:12px}
+.glossary summary{cursor:pointer;font-weight:600;font-size:.92rem}
+.glossary dl{margin:8px 0 4px;display:grid;grid-template-columns:minmax(120px,max-content) 1fr;gap:6px 14px;font-size:.86rem}
+.glossary dt{font-weight:700}
+.glossary dd{margin:0;color:var(--muted)}
+.extra-tag{display:inline-block;font-size:.7rem;font-weight:600;color:var(--muted);border:1px solid var(--line);border-radius:4px;padding:0 5px;margin-left:6px;vertical-align:2px}
+.brief-restart{margin-left:auto}
+.lock-note{margin-top:8px}
 .pill{display:inline-block;font-size:.76rem;font-weight:700;letter-spacing:.02em;border-radius:5px;padding:3px 8px;white-space:nowrap}
 .pill-ok{background:var(--ok-wash);color:var(--ok-ink)}
 .pill-warn{background:var(--warn-wash);color:var(--warn-ink)}
@@ -370,6 +384,8 @@ main:focus{outline:none}
   .compare,.sync{grid-template-columns:1fr}
   .r-row,.r-pins{grid-template-columns:96px minmax(0,1fr)}
   .facts li{grid-template-columns:1fr;gap:0}
+  .glossary dl{grid-template-columns:1fr}
+  .brief-restart{margin-left:0}
   .fact-strip{grid-template-columns:repeat(2,minmax(0,1fr))}
   .facts .small{grid-column:1}
   .wire-row{grid-template-columns:minmax(0,1fr)}
@@ -395,6 +411,7 @@ main:focus{outline:none}
     <span class="brand-name">Rider Time Protection Layer</span>
   </a>
   <p class="topnote">Teaching prototype. Orders, AI proposals and records are synthetic.</p>
+  <button type="button" id="lang-toggle" class="btn btn-on-dark btn-lang" lang="zh" aria-label="切换到中文界面 Switch to Chinese">中文</button>
   <button type="button" id="reset" class="btn btn-on-dark" data-action="reset">Reset demo</button>
 </header>
 
@@ -579,6 +596,13 @@ const CASES = {
     story:'Nothing here matches the slides. Change the dispatch numbers, then set an arrival time and the delivery records. The rules in rtpl-core.js are the same ones the numbered cases use.'}
 };
 const ORDER = ['overview','deadline','external','unknown','attributable','safe','overlap','stale'];
+/* Sidebar groups follow the order's lifecycle, as the slides do. Case numbers stay the same. */
+const GROUPS = [
+  {title:'Deadline protection', keys:['deadline','stale']},
+  {title:'Delay accounting', keys:['external','overlap']},
+  {title:'Responsibility and correction', keys:['unknown','attributable','safe']}
+];
+const EXTRA = ['stale','overlap','safe'];  // shown during questions rather than in the main 8-minute demo
 const SCREENS = [
   ['dispatch','Dispatch'], ['rider','Rider'], ['customer','Customer'], ['review','Human review'], ['audit','Oversight']
 ];
@@ -725,10 +749,28 @@ function statusPill(v) {
   return '<span class="pill pill-' + cls + '">' + esc(v) + '</span>';
 }
 
+const EFFECT_INFO = {
+  'Service score': 'The platform\u2019s performance score for the rider',
+  'Customer rating': 'How this order counts toward the rider\u2019s rating',
+  'Bonus': 'Incentive pay tied to on-time delivery',
+  'Future allocation': 'Priority for future order offers'
+};
 function effectsHtml(d) {
   if (!d) return '';
-  return '<div class="effects"><h3>Four separate effects</h3><p class="small">Each is decided and corrected on its own, so harm cannot hide in one of them.</p>' +
-    Object.entries(d.effects).map(([k, v]) => '<div class="effect"><span>' + esc(k) + '</span>' + statusPill(v) + '</div>').join('') + '</div>';
+  return '<div class="effects"><h3>Four separate effects</h3><p class="small">Each is listed and can be corrected on its own, so harm cannot hide in one of them.</p>' +
+    Object.entries(d.effects).map(([k, v]) => '<div class="effect"><span><span class="effect-name">' + esc(k) + '</span><span class="effect-info">' + esc(EFFECT_INFO[k] || '') + '</span></span>' + statusPill(v) + '</div>').join('') +
+    '<p class="small effects-note">In this prototype one decision sets all four together. No real pay, rating or dispatch system is connected.</p></div>';
+}
+
+function glossaryHtml() {
+  return '<details class="glossary"><summary>What these terms mean</summary><dl>' +
+    '<dt>minutes late</dt><dd>Arrival time minus the current deadline.</dd>' +
+    '<dt>new credit</dt><dd>Minutes of verified outside delay that are excused now and were not already added to the deadline. It is time, not money.</dd>' +
+    '<dt>residual minutes</dt><dd>Late minutes still unexplained after the credit. They are not the rider\u2019s fault by themselves; P04 still asks whether reliable evidence shows the rider caused them.</dd>' +
+    '<dt>already compensated</dt><dd>Delay that was already added to the deadline earlier, so it cannot be excused a second time.</dd>' +
+    '<dt>ASSESSMENT ELIGIBLE</dt><dd>The case may be assessed. Nothing has been deducted or applied.</dd>' +
+    '<dt>SUSPENDED</dt><dd>Paused while an appeal waits for an authorised human decision.</dd>' +
+    '<dt>PROTECTED</dt><dd>No adverse effect may apply.</dd></dl></details>';
 }
 
 function inputsTable(editable) {
@@ -763,10 +805,12 @@ function renderSidebar() {
       '<li class="' + (st.done(state) ? 'is-done' : '') + (st.optional ? ' is-optional' : '') + '"><button type="button" data-step="' + n + '"><span class="tick-box" aria-hidden="true"></span><span>' + st.text + (st.optional ? ' <em>(optional)</em>' : '') + '</span></button></li>').join('') + '</ol>';
     return '<li class="side-case' + (active ? ' is-active' : '') + '"><button type="button" data-case="' + key + '"' + (active ? ' aria-current="true"' : '') + '>' +
       (c.num ? '<span class="case-num">' + c.num + '</span>' : '<span class="case-num case-num-o" aria-hidden="true"></span>') +
-      '<span class="case-text"><span class="case-title">' + esc(c.title) + '</span>' + (c.where ? '<span class="case-where">' + esc(c.where) + (active && req ? ', ' + done + ' of ' + req + ' steps done' : '') + '</span>' : '<span class="case-where">Start here</span>') + '</span></button>' + sub + '</li>';
+      '<span class="case-text"><span class="case-title">' + esc(c.title) + (EXTRA.includes(key) ? ' <span class="extra-tag">extra</span>' : '') + '</span>' + (c.where ? '<span class="case-where">' + esc(c.where) + (active && req ? ', ' + done + ' of ' + req + ' steps done' : '') + '</span>' : '<span class="case-where">Start here</span>') + '</span></button>' + sub + '</li>';
   };
+  const group = (title, keys) => '<p class="side-head">' + title + '</p><ol class="side-cases">' + keys.map(item).join('') + '</ol>';
   $('case-list').innerHTML =
-    '<p class="side-head">Demonstration cases</p><ol class="side-cases">' + ORDER.map(item).join('') + '</ol>' +
+    '<ol class="side-cases">' + item('overview') + '</ol>' +
+    GROUPS.map(g => group(g.title, g.keys)).join('') +
     '<p class="side-head">Explore</p><ol class="side-cases">' + item('sandbox') + '</ol>' +
     '<p class="side-foot">Each case opens the screen where its result appears. Ticked steps show what has been done.</p>';
 }
@@ -796,7 +840,8 @@ function renderBrief() {
   const comp = c.compare ? '<p class="brief-compare">' + esc(c.compare.text) + ' <button type="button" class="linklike" data-case="' + c.compare.key + '">Open case ' + CASES[c.compare.key].num + '</button></p>' : '';
   $('brief').innerHTML =
     '<div class="brief-head">' + (c.num ? '<span class="brief-num">Case ' + c.num + '</span>' : '<span class="brief-num brief-sandbox">Sandbox</span>') +
-    '<h1 id="brief-title">' + esc(c.title) + '</h1></div>' +
+    '<h1 id="brief-title">' + esc(c.title) + '</h1>' + (EXTRA.includes(state.key) ? '<span class="extra-tag">extra case, for questions</span>' : '') +
+    '<button type="button" id="act-restart" class="btn btn-small btn-quiet brief-restart" data-action="restart">Restart this case</button></div>' +
     '<p class="brief-q">' + esc(c.question) + '</p><p class="brief-story">' + esc(c.story) + '</p>' + comp + next;
 }
 
@@ -872,7 +917,8 @@ function renderDispatch() {
   const left = '<div class="col-in"><h2>Order A101 inputs</h2>' +
     (sandbox ? '<p class="small">Sandbox: edit any value. Speeds must be above zero.</p>' : '<p class="small">Fixed for this case so it matches the slides. <button type="button" class="linklike" data-case="sandbox">Change numbers in the Sandbox</button></p>') +
     inputsTable(sandbox) +
-    '<button type="button" id="act-check" class="btn btn-primary btn-block" data-action="check">Check before notification</button>' +
+    '<button type="button" id="act-check" class="btn btn-primary btn-block" data-action="check"' + (!sandbox && state.checked ? ' disabled' : '') + '>Check before notification</button>' +
+    (!sandbox && state.checked ? '<p class="small lock-note">' + (state.delivery ? 'This case starts after delivery. The dispatch check already ran at 12:00, so it is shown here as a record.' : 'Already checked. To run this case again from the start, press Restart this case.') + '</p>' : '') +
     (sandbox && state.checked ? '<button type="button" class="btn btn-quiet btn-block" data-action="new-order">Start a new sandbox order</button>' : '') +
     '<p class="small">Configuration ' + C.CONFIG.version + '. Values are illustrative and would need local validation.</p></div>';
 
@@ -898,7 +944,7 @@ function renderDispatch() {
     const legend = '<p class="legend">' + parts.map(g => '<span class="lg"><i class="sw ' + g.cls + '"></i>' + g.lab + ' ' + g.text + '</span>').join(' + ') + ' = <b>' + p.total + ' min</b></p>';
     const extended = x.deadline > i.proposed;
     const later = a101.deadline > x.deadline;
-    const laterWhy = state.key === 'external' ? 'Later extended to ' + clock(a101.deadline) + ' for a verified restaurant delay.'
+    const laterWhy = state.key === 'external' ? 'Then ' + clock(x.deadline) + ' + ' + (a101.deadline - x.deadline) + ' min verified restaurant delay = ' + clock(a101.deadline) + '.'
       : state.route.length ? 'Now ' + clock(a101.deadline) + ' after the 12:20 route change below.' : 'Kept at the previously accepted ' + clock(a101.deadline) + '.';
     right = '<div class="result result-ok"><p class="r-kicker">Order A101, P02</p><h2>The checked deadline passes to both users</h2>' +
       '<div class="clocks"><div><span>AI proposal</span><strong class="muted-clock">' + clock(i.proposed) + '</strong></div><div class="arrow" aria-hidden="true">→</div><div><span>Protected deadline</span><strong id="protected-time">' + clock(a101.deadline) + '</strong></div></div>' +
@@ -975,6 +1021,7 @@ function assessTrace(d, x) {
     {code:'residual = lateness − credit', value:x.residual + ' min'},
     {rule:'P03', code:'IF residual = 0: PROTECT', value:x.residual === 0 ? 'yes' : 'no', state:x.residual === 0 ? 'hit' : 'skip'},
     {rule:'P05', code:'ELSE IF verified safe legal detour: PROTECT', value:x.residual === 0 ? '—' : b === 'SAFE_ALTERNATIVE' ? 'yes' : 'no', state:b === 'SAFE_ALTERNATIVE' ? 'hit' : 'skip'},
+    {code:'rider cause covers residual ' + (x.residual ? span([dl + x.credit, d.completed]) : '') + '?', value: x.residual === 0 ? '—' : !d.riderEvidence ? 'no record' : (C.length(C.subtract([[dl + x.credit, d.completed]], [[d.riderEvidence.start, d.riderEvidence.end]])) === 0 ? 'yes, fully' : 'only partly')},
     {rule:'P04', code:'ELSE IF cause record incomplete OR no reliable rider cause: PROTECT', value:['CAUSE_RECORD_INCOMPLETE','RIDER_CAUSE_NOT_ESTABLISHED'].includes(b) ? (b === 'CAUSE_RECORD_INCOMPLETE' ? 'yes: record incomplete' : 'yes: no reliable rider cause') : (b === 'RIDER_CAUSE_SUPPORTED' ? 'no' : '—'), state:['CAUSE_RECORD_INCOMPLETE','RIDER_CAUSE_NOT_ESTABLISHED'].includes(b) ? 'hit' : 'skip'},
     {rule:'P04', code:'ELSE: assessment eligible; explain evidence, offer appeal', value:b === 'RIDER_CAUSE_SUPPORTED' ? 'yes' : '—', state:b === 'RIDER_CAUSE_SUPPORTED' ? 'hit' : 'skip'}
   ];
@@ -992,7 +1039,7 @@ function decisionCopy(d, x) {
     rider:'You were ' + x.late + ' minutes late. Your deadline was already extended by 10 minutes for the restaurant delay, so that delay is not counted again. Nothing shows you caused the other ' + x.residual + ' minutes, so nothing affects your score, rating, bonus or future orders.'};
   if (b === 'COVERED_BY_OUTSIDE_DELAY') return {
     simple: d.events.length > 1 && sumOutside !== unionOutside ? 'Add the durations: ' + d.events.map(e => e.end - e.start).join(' + ') + ' = ' + sumOutside + ' min of outside delay, although only ' + unionOutside + ' minutes actually passed.' : 'Ignore outside delays and judge by the clock.',
-    rtpl: d.events.length > 1 ? 'Merge the overlap: ' + x.credit + ' unique minutes excused, ' + x.residual + ' left. Rider protected.' : 'The verified outside delay covers the lateness. Rider protected.',
+    rtpl: d.events.length > 1 ? 'Merge the overlap: ' + d.events.map(e => e.end - e.start).join(' + ') + ' − ' + (sumOutside - unionOutside) + ' overlapping = ' + unionOutside + ' unique minutes, so ' + x.credit + ' excused and ' + x.residual + ' left. Rider protected.' : 'The verified outside delay covers the lateness. Rider protected.',
     ethic:['P03', 'Honest accounting: overlapping records describe the same minutes, so they are counted once. Accuracy protects riders and keeps the excuse credible to customers and the platform.'],
     rider:'You were ' + x.late + ' minutes late, and verified outside delays cover all of it. Nothing affects your score, rating, bonus or future orders.'};
   if (b === 'ON_TIME') return {simple:'—', rtpl:'Delivered by the deadline. Nothing to assess.', ethic:['P03', 'On time: no effect applies.'], rider:'Delivered on time. Thank you.'};
@@ -1060,7 +1107,7 @@ function renderRider() {
   } else {
     const dl = state.orders[0].deadline;
     const facts = '<div class="fact-strip">' +
-      '<div><span>Deadline</span><b>' + clock(dl) + '</b>' + (d.originalDeadline !== null && d.originalDeadline !== dl ? '<small>was ' + clock(d.originalDeadline) + ', extended for the restaurant delay</small>' : '') + '</div>' +
+      '<div><span>Deadline</span><b>' + clock(dl) + '</b>' + (d.originalDeadline !== null && d.originalDeadline !== dl ? '<small>' + clock(d.originalDeadline) + ' + ' + (dl - d.originalDeadline) + ' min restaurant extension = ' + clock(dl) + '</small>' : '') + '</div>' +
       '<div><span>Arrived</span><b>' + clock(d.completed) + '</b><small>' + (d.completed > dl ? (d.completed - dl) + ' min after the deadline' : 'on time') + '</small></div>' +
       '<div><span>Rider-caused delay</span><b>' + (d.riderEvidence ? (d.safeRoute ? 'route choice' : 'reliable record') : d.causalComplete ? 'none recorded' : 'not established') + '</b><small>' + (d.riderEvidence ? span([d.riderEvidence.start, d.riderEvidence.end]) : d.causalComplete ? '' : 'cause record incomplete') + '</small></div>' +
       '<div><span>Verified legal safe alternative</span><b>' + (d.safeRoute ? 'yes' : 'no') + '</b></div></div>';
@@ -1077,7 +1124,7 @@ function renderRider() {
       result = '<div class="result result-idle"><h2>Not checked yet</h2><p>Press <b>Check delay responsibility</b> to apply P03 to P05 to this delivery. The ruler above shows the records the rules will use.</p></div>';
     } else {
       const copy = decisionCopy(d, x);
-      result = decisionCard(x) + effectsHtml(x) + (x.branch === 'ON_TIME' ? '' : compare(copy.simple, copy.rtpl)) + ethic(copy.ethic[0], copy.ethic[1]) + assessTrace(d, x) +
+      result = decisionCard(x) + glossaryHtml() + effectsHtml(x) + (x.branch === 'ON_TIME' ? '' : compare(copy.simple, copy.rtpl)) + ethic(copy.ethic[0], copy.ethic[1]) + assessTrace(d, x) +
         (locked ? '<p class="small">The decision is under review. <button type="button" class="linklike" data-screen="review">Open Human review</button></p>' : '');
     }
     main = '<div class="panel-head"><h2>Delivery records for A101</h2><button type="button" id="act-assess" class="btn btn-primary" data-action="assess"' + (locked ? ' disabled title="Locked while the review record is kept"' : '') + '>Check delay responsibility</button></div>' +
@@ -1209,9 +1256,11 @@ function highlight(id) {
 
 /* ---------- actions ---------- */
 const actions = {
+  restart() { const k = state.key, scr = state.screen; openCase(k, CASES[k].screen); say('Case restarted. Times, records and results are back to the start of this case.', 'info'); },
   reset() { openCase('overview'); say('Demo reset. Every case is back to its starting state.', 'info'); render(); },
   dismiss() { state.msg = null; renderMsg(); },
   check() {
+    if (state.key !== 'sandbox' && state.checked) throw Error('This dispatch check has already run. Press Restart this case to start again.');
     const i = state.inputs;
     const prev = state.orders[0].deadline;
     const x = C.initial(i, i.proposed, 0);
@@ -1376,8 +1425,10 @@ document.addEventListener('change', e => {
   if (!f) return;
   if (!setField(f.dataset.field, f)) { say('Enter a number of zero or more.', 'error'); renderMsg(); return; }
   const group = f.dataset.field.split('.')[0];
-  if (group === 'inputs') { say('Input changed. Press Check before notification to run the rules again.', 'info'); renderMsg(); }
-  if (group === 'sandbox') { state.decision = null; markStale(); say('Delivery inputs changed. Press Check delay responsibility again.', 'info'); renderMsg(); }
+  // No message here: inserting one would shift the layout under the pointer as the
+  // viewer moves to the Check button. The faded result shows the inputs changed.
+  if (group === 'inputs') markStale();
+  if (group === 'sandbox') { state.decision = null; markStale(); }
 });
 
 /* ---------- start ---------- */
@@ -1388,7 +1439,522 @@ function fromHash() {
 }
 window.addEventListener('hashchange', () => { const k = fromHash(); if (k !== state.key) openCase(k); });
 openCase(fromHash());
-window.RTPLApp = {get state() { return state; }, openCase};
+window.RTPLApp = {get state() { return state; }, openCase, render};
+})();
+
+</script>
+<script>
+/* RTPL interface: 中文 / English switch.
+   English is the source text. In Chinese mode this file rewrites the rendered text;
+   key terms, buttons and status words stay bilingual so they still match the English
+   slides and scripts. It never changes any decision: the rules in rtpl-core.js and the
+   state in app.js are untouched. Pseudocode, file contents and typed text stay as they are. */
+(function () {
+'use strict';
+const KEY = 'rtpl-lang';
+let lang = 'en';
+try { lang = localStorage.getItem(KEY) === 'zh' ? 'zh' : 'en'; } catch (e) { /* storage unavailable */ }
+
+/* Bilingual form for terms the slides and scripts use in English. */
+const B = (zh, en) => zh + ' ' + en;
+
+/* Exact phrases. */
+const D = {
+  // header, footer, navigation
+  'Skip to the prototype': '跳到原型',
+  'Rider Time Protection Layer': '骑手时间保护层 Rider Time Protection Layer',
+  'Teaching prototype. Orders, AI proposals and records are synthetic.': '教学原型。订单、AI 提议和各类记录都是模拟数据。',
+  'Reset demo': B('重置演示', 'Reset demo'),
+  'RTPL, T1 Mixue Bingcheng, FIT1055 Assignment 2b.': 'RTPL，T1 Mixue Bingcheng，FIT1055 Assignment 2b。',
+  'Demonstration only: no real deliveries, model inference, platform connection or measured rider outcomes. Reviewer authority and evidence reliability are simulated.': '仅供演示：没有真实配送、模型推理、平台接入或实测的骑手结果。审核权限和证据可靠性均为模拟。',
+  'Who is looking:': '谁在看：',
+  'Dispatch': B('派单', 'Dispatch'), 'Rider': B('骑手', 'Rider'), 'Customer': B('顾客', 'Customer'),
+  'Human review': B('人工复核', 'Human review'), 'Oversight': B('监督', 'Oversight'),
+  'Dismiss': '关闭',
+  // sidebar
+  'Deadline protection': '截止时间保护 Deadline protection',
+  'Delay accounting': '延误时间核算 Delay accounting',
+  'Responsibility and correction': '责任判断与纠正 Responsibility and correction',
+  'Explore': '自由探索 Explore',
+  'extra': '补充', 'extra case, for questions': '补充案例，问答时用',
+  'Start here': '从这里开始',
+  'How RTPL fits in': B('RTPL 总览', 'How RTPL fits in'),
+  'Tight AI deadline': B('AI 时限过紧', 'Tight AI deadline'),
+  'Delay already compensated': B('延误已补偿', 'Delay already compensated'),
+  'Late, cause not established': B('迟到，原因未确认', 'Late, cause not established'),
+  'Late, rider cause supported': B('迟到，有骑手原因证据', 'Late, rider cause supported'),
+  'Safe legal detour': B('安全合法绕行', 'Safe legal detour'),
+  'Overlapping outside delays': B('外部延误重叠', 'Overlapping outside delays'),
+  'Out-of-date route data': B('路线资料过期', 'Out-of-date route data'),
+  'Sandbox: your own numbers': B('沙盒：自己改数字', 'Sandbox: your own numbers'),
+  'Dispatch and Rider': '派单和骑手', 'Rider, then Human review': '骑手，然后人工复核',
+  'Each case opens the screen where its result appears. Ticked steps show what has been done.': '点一个案例，就会打开显示其结果的页面。打勾的步骤表示已经完成。',
+  '(optional)': '（可选）',
+  // step texts (split around bold button names)
+  'Press': '按', 'press': '按', ', press': '，按', ', then': '，然后',
+  'On Rider, press': '在骑手 Rider 页按',
+  'On Rider, set the arrival and records, press': '在骑手 Rider 页设置到达时间和记录，然后按',
+  'Change any dispatch number, press': '修改任意派单数字，然后按',
+  'Untick reviewer authority, press': '取消勾选审核权限，然后按',
+  'Tick authority, choose Reverse, press': '勾选审核权限，选择撤销 Reverse，然后按',
+  'Open': '打开',
+  '(on Dispatch)': '（在派单 Dispatch 页）', '(on Rider)': '（在骑手 Rider 页）', '(on Oversight)': '（在监督 Oversight 页）', '(on Human review)': '（在人工复核 Human review 页）', '(on Customer)': '（在顾客 Customer 页）',
+  'Show me': B('指给我看', 'Show me'),
+  'Done': '完成', 'All steps for this case are complete.': '这个案例的步骤都完成了。',
+  'Restart this case': B('重新开始本案例', 'Restart this case'),
+  // buttons
+  'Check before notification': B('通知前检查', 'Check before notification'),
+  'Apply road closure': B('模拟道路封闭', 'Apply road closure'),
+  'Apply faster route': B('模拟路线变快', 'Apply faster route'),
+  'Check delay responsibility': B('检查延误责任', 'Check delay responsibility'),
+  'Request human review': B('申请人工复核', 'Request human review'),
+  'Record reasoned decision': B('记录有理由的决定', 'Record reasoned decision'),
+  'Let 24 h pass without a decision': B('模拟 24 小时无人处理', 'Let 24 h pass without a decision'),
+  'Download audit summary': B('下载审计摘要', 'Download audit summary'),
+  'Start a new sandbox order': '开始一个新的沙盒订单',
+  'Go to Dispatch': '去派单 Dispatch 页', 'Go to Rider': '去骑手 Rider 页', 'Open Human review': '打开人工复核 Human review 页',
+  'Open case 04, which shows the full appeal': '打开案例 04（完整的申诉流程）',
+  'Start with case 01': '从案例 01 开始',
+  'Change numbers in the Sandbox': '到沙盒 Sandbox 里改数字',
+  // case briefs
+  'The AI proposes 24 minutes. Is that a safe instruction to give a rider?': 'AI 提议 24 分钟送达。这是一个可以安全交给骑手的指令吗？',
+  'Order A101 is accepted at 12:00. The simulated AI dispatch system proposes delivery by 12:24. Nothing has been sent to the rider or the customer yet.': '订单 A101 在 12:00 被接单。模拟的 AI 派单系统提议 12:24 前送达。此时还没有把任何时间发给骑手或顾客。',
+  'Can the same restaurant delay excuse the rider twice?': '同一段餐厅延误，能为骑手抵扣两次吗？',
+  'A101 was due at 12:34. The restaurant was 10 minutes late, so RTPL already moved the deadline to 12:44. The rider arrives at 12:49.': 'A101 原定 12:34 截止。餐厅出餐晚了 10 分钟，RTPL 已经把截止时间延到 12:44。骑手 12:49 送达。',
+  'The rider is 10 minutes late and the records cannot say why. Should a penalty follow?': '骑手迟到 10 分钟，但记录说不清原因。应该处罚吗？',
+  'A101 is due at 12:34 and arrives at 12:44. There is no verified outside delay, and the record of what caused the delay is incomplete.': 'A101 截止 12:34，12:44 送达。没有经核实的外部延误，导致延误原因的记录也不完整。',
+  'Same 10 minutes late, but with a reliable record: case 04.': '同样迟到 10 分钟，但有可靠记录：见案例 04。',
+  'Reliable records show the rider caused the delay. What may happen, and how can it be corrected?': '可靠记录显示是骑手造成了延误。接下来可能怎样？如果有错又怎样纠正？',
+  'A101 is due at 12:34 and arrives at 12:44. A verified, reliable synthetic record shows a stop the rider chose to make from 12:34 to 12:44.': 'A101 截止 12:34，12:44 送达。一条经核实、可靠的模拟记录显示，骑手在 12:34–12:44 自行停留。',
+  'Same 10 minutes late, but the cause is not established: case 03.': '同样迟到 10 分钟，但原因未确认：见案例 03。',
+  'The rider chose a longer, legal route to avoid danger. Is that their fault?': '骑手为了避开危险，选了一条更长但合法的路线。这算骑手的错吗？',
+  'A101 is due at 12:34 and arrives at 12:44. The record shows the extra 10 minutes came from the rider’s own route choice, and that choice was a verified safe, legal detour.': 'A101 截止 12:34，12:44 送达。记录显示多出的 10 分钟来自骑手自己选的路线，而这条路线是经核实的安全合法绕行。',
+  'Two outside delays overlap. How many minutes should be excused?': '两段外部延误有重叠。应该抵扣多少分钟？',
+  'A101 is due at 12:34 and arrives at 12:44. Traffic held the rider from 12:34 to 12:41, and the restaurant hand-off ran from 12:38 to 12:44. Both records are verified.': 'A101 截止 12:34，12:44 送达。12:34–12:41 骑手被交通耽误，12:38–12:44 餐厅交接耽误。两条记录都经过核实。',
+  'What if the route and service data are out of date?': '如果路线和服务资料已经过期怎么办？',
+  'The same order as case 01, but the route and service data have not been refreshed. RTPL cannot check the deadline against current conditions.': '和案例 01 同一笔订单，但路线和服务资料没有更新。RTPL 无法按当前情况检查截止时间。',
+  'Change the inputs and watch the same rules respond.': '改动输入，看同一套规则如何反应。',
+  'Nothing here matches the slides. Change the dispatch numbers, then set an arrival time and the delivery records. The rules in rtpl-core.js are the same ones the numbered cases use.': '这里的结果不会和 PPT 一致。先改派单数字，再设置到达时间和配送记录。用的是和编号案例相同的 rtpl-core.js 规则。',
+  'Sandbox': '沙盒 Sandbox',
+  // overview
+  'RTPL checks an AI delivery deadline before a rider sees it, and checks the evidence before lateness can count against the rider.': 'RTPL 在骑手看到 AI 给的送达时限之前先检查它；在迟到可能对骑手不利之前，先检查证据。',
+  'It sits between an existing AI dispatch system and the people it affects. It does not choose riders or retrain the model. Every result on this site comes from the same seven rules (P01–P07), run in your browser on synthetic orders.': '它位于现有的 AI 派单系统和受影响的人之间，不负责选骑手，也不重新训练模型。本网站的每个结果都来自同一套七条规则（P01–P07），在你的浏览器里用模拟订单运行。',
+  'The journey, before visual polish': '流程（未做视觉美化前的样子）',
+  'Low-fidelity view': '低保真视图 Low-fidelity',
+  'Check dispatch': B('检查派单', 'Check dispatch'), 'Deliver': B('配送', 'Deliver'), 'Explain': B('解释', 'Explain'), 'Review': B('复核', 'Review'),
+  'AI deadline compared with a legal route and service time': '把 AI 时限和合法路线加服务时间比较',
+  'Out-of-date inputs hold dispatch (P01)': '资料过期就暂停派单（P01）',
+  'Deadline = the longer of the two (P02)': '截止时间取两者中较长的（P02）',
+  'Rider and customer see one shared time': '骑手和顾客看到同一个时间',
+  'Route changes recheck every affected order': '路线变化时重新检查每一笔受影响的订单',
+  'An accepted time never moves earlier (P02)': '已接受的时间只会延后，不会提前（P02）',
+  'Outside delays counted once (P03)': '外部延误只算一次（P03）',
+  'No reliable rider cause, no penalty (P04)': '没有可靠的骑手原因证据，就不处罚（P04）',
+  'Safe legal detours protected (P05)': '安全合法的绕行受保护（P05）',
+  'An appeal pauses all four effects (P06)': '申诉会暂停全部四项影响（P06）',
+  'An authorised person must give a reason (P06)': '必须由有权限的人给出理由（P06）',
+  'A minimised, versioned record (P07)': '最小化、带版本的记录（P07）',
+  'How to use this page': '怎么使用这个页面',
+  'Pick a case on the left. It opens the screen where its result appears.': '在左边选一个案例，会直接打开显示结果的页面。',
+  'Follow the step bar above the screen.': '按页面上方的步骤提示条操作。',
+  'points at the button to press.': '会指出要按的按钮。',
+  'The tabs show the same order through different eyes: dispatch, rider, customer, a human reviewer and an auditor.': '上方标签是从不同角度看同一笔订单：派单、骑手、顾客、人工复核员和审计员。',
+  'Want different numbers? Use the': '想换数字？用',
+  '. The numbered cases stay fixed so they match the slides.': '。编号案例的数字是固定的，和 PPT 一致。',
+  'What is real and what is simulated': '哪些是真的在运行，哪些是模拟',
+  'Runs for real': '真实运行', 'Simulated': '模拟', 'Not claimed': '不声称',
+  'Deadline arithmetic, interval accounting, the protection decision, appeal and review state changes, and the minimised export.': '截止时间计算、时间区间核算、保护判断、申诉和复核的状态变化，以及最小化导出。',
+  'The AI proposal, the reliability labels on evidence, and the reviewer’s authority (a checkbox, not a login).': 'AI 提议、证据上的可靠性标记，以及审核员的权限（是一个勾选框，不是真实登录）。',
+  'Platform integration, real riders, or any measured safety or income result. Those need the proposed pilot.': '平台接入、真实骑手、任何实测的安全或收入结果。这些需要拟议的试点来验证。',
+  // dispatch
+  'Order A101 inputs': '订单 A101 的输入',
+  'Fixed for this case so it matches the slides.': '本案例的数字是固定的，和 PPT 一致。',
+  'Sandbox: edit any value. Speeds must be above zero.': '沙盒：可以修改任意数值。速度必须大于 0。',
+  'AI proposed duration': 'AI 提议用时', 'Route distance': '路线距离', 'Legal speed cap': '法定限速',
+  'Speed in current conditions': '当前路况下的速度', 'Traffic signals allowance': '红绿灯预留',
+  'Restaurant waiting allowance': '餐厅等候预留', 'Building access allowance': '进入楼宇预留',
+  'Hand-over allowance': '交接预留', 'Route and service data': '路线和服务资料',
+  'Route and service data are current': '路线和服务资料是最新的',
+  'Current': '最新', 'Out of date': '已过期',
+  'Configuration DEMO-1.0. Values are illustrative and would need local validation.': '配置 DEMO-1.0。数值仅为示例，实际使用需本地验证。',
+  'Already checked. To run this case again from the start, press Restart this case.': '已经检查过。要从头再来，请按“重新开始本案例”。',
+  'This case starts after delivery. The dispatch check already ran at 12:00, so it is shown here as a record.': '本案例从送达之后开始。派单检查已在 12:00 完成，这里只作为记录显示。',
+  'Nothing has been sent': '还没有发出任何时间',
+  'Protected deadline': B('受保护的截止时间', 'Protected deadline'),
+  'AI proposal': B('AI 提议', 'AI proposal'),
+  'Checked minimum': B('检查后的最低用时', 'Checked minimum'),
+  'Press Check before notification': '请按“通知前检查”',
+  'Until the check runs, the rider and the customer see no time at all.': '检查运行之前，骑手和顾客都看不到任何时间。',
+  'The checked deadline passes to both users': '检查后的截止时间同时发给骑手和顾客',
+  'The AI proposal already allows the checked minimum, so it is kept.': 'AI 提议已经满足检查后的最低用时，所以保留。',
+  'Dispatch held for review': B('派单暂停待复核', 'Dispatch held for review'),
+  'No unchecked deadline published. The route and service data are out of date, so a time cannot be checked.': '不发布未经检查的截止时间（No unchecked deadline published）。路线和服务资料已过期，无法检查时间。',
+  'On hold': '暂停中', 'No order sent': '未派单', 'Confirming time': '确认时间中',
+  'A simpler rule': B('简单规则', 'A simpler rule'),
+  'RTPL': 'RTPL',
+  'Hold the order and ask for current data. Publish nothing unchecked.': '暂停这单，要求提供最新资料。不发布任何未经检查的时间。',
+  'Duty (deontology): never turn untrusted safety data into an instruction. The cost is a short wait for the order, which the pilot would measure.': '义务（义务论 deontology）：绝不把不可信的安全资料变成指令。代价是订单要等一会儿，试点时会测量这一点。',
+  'Safety duty (deontology): do not instruct a rider to beat a lawful, realistic minimum. Utilitarian check: customers may wait longer, so the pilot measures waiting time and hourly earnings together. Wrong inputs can still give an optimistic floor.': '安全义务（义务论 deontology）：不能要求骑手快过合法、现实的最低用时。功利主义检查（utilitarian）：顾客可能要多等，所以试点会同时测量等待时间和每小时收入。输入有误时，最低用时仍可能偏乐观。',
+  'Accepted orders remain protected': '已接受的订单继续受保护',
+  'The rider’s trip carries A101 and B102. At a simulated 12:20, the route changes. RTPL rechecks every affected order before publishing anything, and an accepted time can only move later.': '骑手这一趟同时送 A101 和 B102。模拟时间 12:20 路线发生变化。RTPL 先重新检查每一笔受影响的订单再发布，已接受的时间只能延后。',
+  'Order': '订单', 'Accepted before 12:20': '12:20 前已接受', 'After road closure': '道路封闭后', 'After faster route': '路线变快后',
+  'second order on the same trip': '同一趟的第二单', 'not yet': '尚未',
+  'later': B('延后', 'later'), 'kept': B('不变', 'kept'),
+  'Keep the old times and leave the rider to absorb the closure.': '保留旧时间，让骑手自己承受封路带来的延误。',
+  'MAX(accepted, new check) for every order, published together, so rider and customer never see a shorter time.': '每单取 MAX(已接受时间, 新检查结果)，一起发布，骑手和顾客永远不会看到更短的时间。',
+  'Promise-keeping (deontology): an accepted deadline is a commitment. A partial update with missing data holds the whole batch (P01).': '守信（义务论 deontology）：已接受的截止时间是一个承诺。若有订单缺资料，整批更新都会暂停（P01）。',
+  'min': '分钟', 'km': '公里', 'km/h': '公里/小时',
+  'Travel': '路程', 'Signals': '红绿灯', 'Restaurant': '餐厅', 'Building': '楼宇', 'Hand-over': '交接',
+  // rider
+  'Rider app': '骑手 App', 'Customer app': '顾客 App',
+  'Deliver A101 by': 'A101 请在此时间前送达',
+  'Checked against a legal route and service time.': '已按合法路线和服务时间检查。',
+  'Updated after a route change. Accepted times never move earlier.': '路线变化后已更新。已接受的时间不会提前。',
+  'No order yet': '暂无订单',
+  'Dispatch has not checked a deadline for A101.': '派单系统还没有检查 A101 的截止时间。',
+  'Dispatch is on hold until the route data are current.': '派单暂停，等路线资料更新。',
+  'What the rider is told, in plain words. The panel on the right is how RTPL reached it.': '左边是骑手看到的白话说明，右边是 RTPL 得出结论的过程。',
+  'No delivery to check in this case': '本案例没有需要检查的配送',
+  'Case 01 is about the deadline itself. The phone shows what the rider is told. Delivery checks are cases 02 to 06.': '案例 01 讲的是截止时间本身，手机上显示骑手被告知的时间。配送后的检查在案例 02 到 06。',
+  'Dispatch is on hold, so no order was sent.': '派单已暂停，所以没有派出订单。',
+  'Run the dispatch check first.': '请先运行派单检查。',
+  'Open case 02': '打开案例 02', 'Open case 03': '打开案例 03', 'Open case 04': '打开案例 04',
+  'Delivery records for A101': 'A101 的配送记录',
+  'Deadline': '截止时间', 'Arrived': '到达', 'Rider-caused delay': '骑手造成的延误',
+  'Verified legal safe alternative': '经核实的安全合法替代路线',
+  'none recorded': '无记录', 'not established': '未确认', 'cause record incomplete': '原因记录不完整',
+  'reliable record': '可靠记录', 'route choice': '自选路线', 'yes': '是', 'no': '否', 'on time': '准时',
+  'Restaurant delay': '餐厅延误', 'Traffic': '交通', 'Restaurant hand-off': '餐厅交接', 'Outside delay': '外部延误',
+  'verified': '已核实', 'reliable': '可靠',
+  'Already compensated': B('已补偿', 'Already compensated'), 'added to deadline': '已加进截止时间',
+  'Rider-caused stop': '骑手自行停留', 'Rider’s detour': '骑手绕行', 'safe, legal': '安全合法',
+  'Late': B('迟到', 'Late'), 'RTPL result': 'RTPL 结果', 'Not checked yet': '尚未检查',
+  'Excused now': B('本次抵扣', 'Excused now'), 'Still unexplained': B('仍未解释', 'Still unexplained'),
+  'new credit': 'new credit', 'residual': 'residual', 'Nothing to excuse': '没有要抵扣的', 'Nothing to assess': '没有要评估的',
+  'Blue bars are verified outside delays, which are not the rider’s doing.': '蓝色条是经核实的外部延误，不是骑手造成的。',
+  'Blue bars are verified outside delays, which are not the rider’s doing. Hatched time was already added to the deadline.': '蓝色条是经核实的外部延误，不是骑手造成的。斜纹部分已经加进截止时间。',
+  'Arrival time': '到达时间',
+  'Verified outside delay starting at the deadline': '从截止时间开始的已核实外部延误',
+  'Reliable record shows the rider caused the delay': '可靠记录显示是骑手造成了延误',
+  'The extra time was a verified safe, legal detour': '多出的时间来自经核实的安全合法绕行',
+  'The cause record is complete': '原因记录是完整的',
+  'to apply P03 to P05 to this delivery. The ruler above shows the records the rules will use.': '，对这次配送应用 P03 到 P05。上面的时间条显示了规则会用到的记录。',
+  'The decision is under review.': '这个决定正在复核中。',
+  // decision card
+  'Rider protected': B('骑手受保护', 'Rider protected'),
+  'Assessment can proceed': B('可以继续评估', 'Assessment can proceed'),
+  'Disputed effects suspended': B('有争议的影响已暂停', 'Disputed effects suspended'),
+  'Applied automatically. No appeal needed.': '自动适用，不需要申诉。',
+  'Eligible for assessment. Nothing has been deducted or applied.': '具备评估条件。没有扣任何钱，也没有施加任何影响。',
+  'Waiting for an authorised human decision. Nothing applies meanwhile.': '等待有权限的人作出决定。在此之前什么都不生效。',
+  'A human reviewer reversed the assessment.': '人工复核员撤销了评估。',
+  'A human reviewer upheld the evidence-supported assessment.': '人工复核员维持了有证据支持的评估。',
+  'minutes late': B('迟到分钟', 'minutes late'),
+  '(excused now)': '（本次抵扣）', '(still unexplained)': '（仍未解释）', 'residual minutes': 'residual minutes',
+  'What these terms mean': '这些术语是什么意思',
+  'Arrival time minus the current deadline.': '到达时间减去当前截止时间。',
+  'Minutes of verified outside delay that are excused now and were not already added to the deadline. It is time, not money.': '本次抵扣的已核实外部延误分钟数，且之前没有加进截止时间。它是时间，不是钱。',
+  'Late minutes still unexplained after the credit. They are not the rider’s fault by themselves; P04 still asks whether reliable evidence shows the rider caused them.': '抵扣后仍未解释的迟到分钟。它本身不代表骑手有责任；P04 还要看是否有可靠证据显示是骑手造成的。',
+  'already compensated': '已补偿 already compensated',
+  'Delay that was already added to the deadline earlier, so it cannot be excused a second time.': '之前已经加进截止时间的延误，不能再抵扣第二次。',
+  'The case may be assessed. Nothing has been deducted or applied.': '这个案例可以进入评估。没有扣钱，也没有施加任何影响。',
+  'Paused while an appeal waits for an authorised human decision.': '申诉等待有权限的人决定期间，暂停生效。',
+  'No adverse effect may apply.': '不得施加任何不利影响。',
+  'Four separate effects': '四项分开的影响',
+  'Each is listed and can be corrected on its own, so harm cannot hide in one of them.': '每一项单独列出、可以单独纠正，伤害就无法藏在其中某一项里。',
+  'Service score': B('服务分', 'Service score'), 'Customer rating': B('顾客评分', 'Customer rating'),
+  'Bonus': B('奖金', 'Bonus'), 'Future allocation': B('以后的派单', 'Future allocation'),
+  'The platform’s performance score for the rider': '平台给骑手的绩效分',
+  'How this order counts toward the rider’s rating': '这单如何计入骑手的评分',
+  'Incentive pay tied to on-time delivery': '与准时送达挂钩的奖励金',
+  'Priority for future order offers': '以后接到订单的优先程度',
+  'In this prototype one decision sets all four together. No real pay, rating or dispatch system is connected.': '在本原型中，四项由同一个判断一起设定。没有接入真实的薪酬、评分或派单系统。',
+  'PROTECTED': B('受保护', 'PROTECTED'), 'SUSPENDED': B('已暂停', 'SUSPENDED'), 'ASSESSMENT ELIGIBLE': B('可评估', 'ASSESSMENT ELIGIBLE'),
+  'Late means at fault: the penalty applies at once, with no explanation and no review.': '迟到就算有错：立即处罚，不解释、不复核。',
+  'Reliable evidence makes the case eligible for assessment only. The rider sees the evidence, nothing is applied yet, and an appeal pauses all four effects.': '有可靠证据也只是让案例具备评估条件。骑手能看到证据，此时什么都还没生效，而且申诉会暂停全部四项影响。',
+  'Evidence-based and contestable: the rider is told what the record shows and can ask a person with authority to correct it.': '以证据为准、可以申诉：骑手会被告知记录显示了什么，并能请有权限的人纠正。',
+  'Lateness is not proof of cause. Protected automatically. The rider does not even need to appeal.': '迟到不等于证明了原因。自动保护，骑手甚至不需要申诉。',
+  'Duty (deontology): no adverse effect without reliable evidence. The platform holds the records, so it carries the risk when they are missing. The cost, some unearned protection, is checked by sampling.': '义务（义务论 deontology）：没有可靠证据就不施加不利影响。记录在平台手里，缺记录的风险由平台承担。代价是可能有一些不该得的保护，用抽查来检验。',
+  'A verified safe, legal detour is protected, even though the rider chose it.': '经核实的安全合法绕行受保护，即使是骑手自己选的。',
+  'Safety outranks speed (deontology): a rule that punishes the safer legal choice would push riders toward the riskier one.': '安全优先于速度（义务论 deontology）：如果规则惩罚更安全的合法选择，就会把骑手推向更危险的选择。',
+  'Honest accounting: each verified minute counts once, which is fair to riders, customers and the platform. Unexplained is not the same as rider fault.': '诚实核算：每一分钟已核实的延误只算一次，对骑手、顾客和平台都公平。“仍未解释”不等于骑手有错。',
+  'Honest accounting: overlapping records describe the same minutes, so they are counted once. Accuracy protects riders and keeps the excuse credible to customers and the platform.': '诚实核算：重叠的记录描述的是同一段时间，只算一次。准确核算既保护骑手，也让抵扣对顾客和平台可信。',
+  'The verified outside delay covers the lateness. Rider protected.': '已核实的外部延误覆盖了迟到时间。骑手受保护。',
+  'Ignore outside delays and judge by the clock.': '忽略外部延误，只看钟点判断。',
+  'Delivered on time. Nothing to assess.': '准时送达，无需评估。', 'Delivered on time. Thank you.': '准时送达，谢谢。',
+  'On time: no effect applies.': '准时：不产生任何影响。',
+  'Demo filing window 48 h, review target 24 h. Illustrative values, not a platform policy.': '演示设定：48 小时内可申诉，24 小时内复核。仅为示例数值，不是平台政策。',
+  // review
+  'No appeal is open': '没有进行中的申诉',
+  'Appeals start on the Rider screen, after a delivery check finds the case eligible for assessment. Protected cases have nothing to appeal.': '申诉从骑手 Rider 页发起，前提是配送检查认为案例具备评估条件。受保护的案例没有可申诉的内容。',
+  'A person can correct the decision': '人可以纠正这个决定',
+  'Simulated reviewer role. A real deployment needs authenticated roles and enough reviewers.': '模拟的审核员角色。真正上线需要经过身份认证的角色和足够的审核人手。',
+  'Reviewer has correction authority (simulated)': B('审核员拥有纠正权限（模拟）', 'Reviewer has correction authority (simulated)'),
+  'Decision': '决定',
+  'Reverse disputed effects': B('撤销有争议的影响', 'Reverse disputed effects'),
+  'Uphold evidence-supported assessment': B('维持有证据支持的评估', 'Uphold evidence-supported assessment'),
+  'Reason given to the rider': '给骑手的理由',
+  'The form is closed so the decision record is kept. Use Reset demo to start again.': '表单已关闭以保留决定记录。要重来请按“重新开始本案例”或“重置演示”。',
+  'Case explanation': '案例说明', 'Decision history': '决定记录',
+  'Right to correction (deontology) and reviewer virtue: someone with real authority must give the rider a reason. A missed review target cannot uphold a penalty on its own.': '获得纠正的权利（义务论 deontology）与审核员的美德（virtue ethics）：必须由真正有权限的人给骑手一个理由。错过复核期限本身不能维持处罚。',
+  // oversight
+  'Protection can be inspected': '保护过程可以被检查',
+  'This is everything the export contains for order A101. An auditor should choose cases independently and have access to reliable records.': '这就是订单 A101 导出的全部内容。审计员应独立选择要查的案例，并能拿到可靠记录。',
+  'Field': '字段', 'Recorded value': '记录的值', 'Meaning': '含义',
+  'Saves RTPL-synthetic-audit.json': '保存为 RTPL-synthetic-audit.json',
+  'Exact file contents': '文件的确切内容',
+  'Never exported': '永远不导出',
+  'Rider identity or name': '骑手身份或姓名', 'GPS traces': 'GPS 轨迹', 'Raw delay or cause evidence': '原始的延误或原因证据', 'The reviewer’s free-text reason': '审核员手写的理由原文',
+  'Accountability with data minimisation: auditors can check rules, versions and outcomes without seeing personal data. The prototype has no login or signed server log; its role views only illustrate this.': '可问责且最小化数据：审计员能检查规则、版本和结果，但看不到个人数据。本原型没有登录或签名的服务器日志，各角色视图只是示意。',
+  'Readable algorithm, P01 to P07': '易读版算法，P01 到 P07',
+  'Missing or stale inputs hold dispatch, and a partial bundle update holds the whole batch.': '资料缺失或过期就暂停派单；一批订单只要有一单缺资料，整批更新都暂停。',
+  'Deadline = MAX(AI proposal, checked floor, accepted deadline); one time for dispatch, rider and customer.': '截止时间 = MAX(AI 提议, 检查后的最低用时, 已接受的截止时间)；派单、骑手、顾客看到同一个时间。',
+  'Excused time = verified outside delays, merged, minus time already compensated.': '可抵扣时间 = 已核实外部延误合并后，减去已经补偿过的时间。',
+  'Protect unless reliable evidence shows the rider caused the remaining lateness.': '除非可靠证据显示剩余迟到是骑手造成的，否则保护骑手。',
+  'Protect a verified safe, legal alternative.': '保护经核实的安全合法替代路线。',
+  'An appeal suspends disputed effects; only an authorised, reasoned human decision ends it.': '申诉会暂停有争议的影响；只有有权限、写明理由的人工决定才能结束申诉。',
+  'Record the version, rule and outcome; leave out identity, GPS, raw evidence and free-text reasons.': '记录版本、规则和结果；不记录身份、GPS、原始证据和理由原文。',
+  'Synthetic order number': '模拟订单号', 'Rule version used for the decision': '判断所用的规则版本', 'Rule that made the last decision': '作出最后一个决定的规则',
+  'No adverse effect may apply': '不得施加不利影响', 'Effects are eligible for assessment': '影响具备评估条件',
+  'No appeal filed': '未申诉', 'Waiting for a reviewer': '等待审核员', 'Reviewer reversed the assessment': '审核员撤销了评估', 'Reviewer upheld the assessment': '审核员维持了评估',
+  'Each of the four effects, recorded separately': '四项影响，各自记录',
+  'Dispatch held, no deadline published': '派单暂停，未发布截止时间', 'No check has run yet': '还没有运行任何检查', 'Deadline checked; no delivery check yet': '截止时间已检查；尚未做配送检查',
+  // customer
+  'Your order A101': '你的订单 A101', 'Your order A101 arrives by': '你的订单 A101 将在此时间前送达',
+  'Confirming…': '确认中…', 'Confirming': '确认中', 'Not checked': '未检查',
+  'We will show a delivery time once it has been checked.': '时间检查完后会显示送达时间。',
+  'We are confirming your delivery time with current route information. We will not show a time we have not checked.': '我们正在用最新路线信息确认送达时间。没有检查过的时间不会显示给你。',
+  'This time includes a realistic allowance for the route, the restaurant and your building.': '这个时间已经为路线、餐厅和你所在楼宇留出了现实的余量。',
+  'Updated at 12:20 because of a change on the route.': '因路线变化，已于 12:20 更新。',
+  'Your rider sees the same time.': '你的骑手看到的是同一个时间。',
+  'One time, shared': '同一个时间，大家共用',
+  'What the customer sees, and what they do not': '顾客能看到什么、看不到什么',
+  'Shown': '显示', 'Never shown': '永远不显示',
+  'The checked delivery time and a short reason when it changes.': '检查后的送达时间，以及时间变化时的简短原因。',
+  'Rider scores, ratings, delay evidence, appeals or reviewer reasons.': '骑手的分数、评分、延误证据、申诉或审核理由。',
+  'One shared time avoids blaming the rider for a promise they never made. Showing only what the customer needs is data minimisation.': '共用一个时间，就不会让骑手为自己从没答应过的时间背锅。只给顾客看必要信息，就是数据最小化。',
+  // trace values
+  'current, continue': '资料最新，继续', 'stale': '过期 stale', 'held': '已暂停', 'not reached': '未执行到',
+  'none': '无', 'no record': '无记录', 'yes, fully': '是，完全覆盖', 'only partly': '只覆盖一部分',
+  'yes: no reliable rider cause': '是：无可靠的骑手原因', 'yes: record incomplete': '是：记录不完整',
+  'waiting': '等待中', 'given': '已填写', 'present': '有', 'missing once: refused': '曾缺失：已拒绝',
+  'target missed, still suspended': '已超期，仍暂停', 'done': '已完成', 'upheld': '已维持',
+  'Values come from this run of': '数值来自本次运行的',
+  '. Highlighted lines are the branch that decided the result.': '。高亮的行就是决定结果的分支。',
+  // messages
+  'Demo reset. Every case is back to its starting state.': '演示已重置。所有案例都回到初始状态。',
+  'Case restarted. Times, records and results are back to the start of this case.': '案例已重新开始。时间、记录和结果都回到本案例的起点。',
+  'Dispatch held for review. No unchecked deadline published.': '派单暂停待复核（Dispatch held for review）。不发布未经检查的截止时间。',
+  'Road closure checked. Both orders get more time, published together.': '已检查道路封闭。两单都得到更多时间，并一起发布。',
+  'Faster route checked. Neither accepted time moves earlier.': '已检查更快路线。两个已接受的时间都没有提前。',
+  'Appeal filed. All four disputed effects are suspended until an authorised person decides.': '已提交申诉。四项有争议的影响全部暂停，直到有权限的人作出决定。',
+  'Review target missed. The case is escalated and the effects stay suspended. Time alone cannot uphold a penalty.': '已错过复核期限。案件升级处理，影响继续暂停。仅凭时间过去不能维持处罚。',
+  'Decision recorded: REVERSE. All four effects are PROTECTED.': '决定已记录：撤销 REVERSE。四项影响全部受保护 PROTECTED。',
+  'Decision recorded: UPHOLD. The evidence-supported assessment stands, with the reason given to the rider.': '决定已记录：维持 UPHOLD。有证据支持的评估成立，理由已告知骑手。',
+  'Downloaded RTPL-synthetic-audit.json. It contains only the fields in the table.': '已下载 RTPL-synthetic-audit.json，里面只有表格中的这些字段。',
+  'Reviewer authority is required.': '需要审核权限（Reviewer authority is required.）',
+  'This dispatch check has already run. Press Restart this case to start again.': '这次派单检查已经运行过。要重来请按“重新开始本案例”。',
+  'Open a pending appeal first.': '请先发起一个申诉。',
+  'There is no delivery to check yet.': '还没有可检查的配送。',
+  'Record a meaningful reason of at least 12 characters.': '请填写至少 12 个字符的有意义理由。',
+  'Cannot uphold an adverse effect without reliable initial causal evidence.': '没有可靠的原因证据，不能维持不利影响。',
+  'Speed must be positive.': '速度必须大于 0。',
+  'A non-negative finite number is required.': '需要填写不小于 0 的有效数字。',
+  'Enter a number of zero or more.': '请填写不小于 0 的数字。',
+  'Save cancelled. Open "Exact file contents" below to see the same JSON.': '已取消保存。展开下方“文件的确切内容”可以看到同样的 JSON。',
+  'This viewer cannot save files. Open "Exact file contents" below to see the same JSON.': '当前查看方式不能保存文件。展开下方“文件的确切内容”可以看到同样的 JSON。',
+  'A save prompt is already open. Finish it, then try again.': '已经有一个保存提示框，请先处理完再试。',
+  // core reasons that appear in the history
+  'Reliable causal evidence supports assessment of the residual delay. Explain the evidence and offer appeal.': '可靠的原因证据支持对剩余延误进行评估。需解释证据并提供申诉。',
+  'Rider responsibility is not reliably established. Apply protection automatically.': '骑手责任没有被可靠地确认。自动保护。',
+  'Verified outside delay covers the remaining lateness.': '已核实的外部延误覆盖了剩余迟到。',
+  'A verified legal safe alternative remains protected.': '经核实的安全合法替代路线受保护。',
+  'Delivery completed by the effective deadline.': '在有效截止时间前送达。',
+  'The supporting record does not reliably establish rider responsibility.': '现有记录不能可靠地证明骑手有责任。'
+};
+
+const T = s => (Object.prototype.hasOwnProperty.call(D, s) ? D[s] : null);
+const TT = s => T(s) || s;
+const tm = s => s.replace(/(\d\d:\d\d) tomorrow/g, '明天 $1');
+const minutes = s => s.replace(/(\d+(?:\.\d+)?) min\b/g, '$1 分钟');
+
+/* Sentences with numbers, times or names. Each returns Chinese for a full match. */
+const R = [
+  [/^Case (\d\d)$/, m => '案例 ' + m[1]],
+  [/^Open case (\d\d)$/, m => '打开案例 ' + m[1]],
+  [/^Next: case (\d\d) (.+)$/, m => '下一个：案例 ' + m[1] + ' ' + TT(m[2])],
+  [/^Step (\d+) of (\d+)$/, m => '第 ' + m[1] + ' 步，共 ' + m[2] + ' 步'],
+  [/^Expect: (.+)$/, m => '预期：' + expect(m[1])],
+  [/^(.+), (\d+) of (\d+) steps done$/, m => TT(m[1]) + '，已完成 ' + m[2] + '/' + m[3] + ' 步'],
+  [/^(\d+(?:\.\d+)?) min$/, m => m[1] + ' 分钟'],
+  [/^(\d+(?:\.\d+)?) km$/, m => m[1] + ' 公里'],
+  [/^(\d+(?:\.\d+)?) km\/h$/, m => m[1] + ' 公里/小时'],
+  [/^(\d+) min = (.+)$/, m => m[1] + ' 分钟 = ' + tm(m[2])],
+  [/^(\d+) × (PROTECTED|SUSPENDED)$/, m => m[1] + ' × ' + TT(m[2])],
+  [/^(Travel|Signals|Restaurant|Building|Hand-over) ([\d.]+)$/, m => D[m[1]] + ' ' + m[2]],
+  [/^Due (.+)$/, m => '截止 ' + tm(m[1])],
+  [/^Arrived (.+)$/, m => '到达 ' + m[1]],
+  [/^Was (.+)$/, m => '原定 ' + m[1]],
+  [/^Checked (\d\d:\d\d)$/, m => '检查后 ' + m[1]],
+  [/^(\d+) minutes late$/, m => '迟到 ' + m[1] + ' 分钟'],
+  [/^(\d+) minutes newly excused$/, m => '本次新抵扣 ' + m[1] + ' 分钟'],
+  [/^(\d+) minutes still unexplained$/, m => '仍未解释 ' + m[1] + ' 分钟'],
+  [/^(\d+) min after the deadline$/, m => '比截止时间晚 ' + m[1] + ' 分钟'],
+  [/^(\d\d:\d\d), the published deadline$/, m => m[1] + '，即发布的截止时间'],
+  [/^(\d\d:\d\d) \+ (\d+) min restaurant extension = (\d\d:\d\d)$/, m => m[1] + ' + 餐厅延误顺延 ' + m[2] + ' 分钟 = ' + m[3]],
+  [/^new check needs (.+)$/, m => '新检查需要到 ' + m[1]],
+  [/^Order A101, (P0\d)$/, m => '订单 A101，' + m[1]],
+  [/^Order A101, not checked yet$/, () => '订单 A101，尚未检查'],
+  [/^(P0\d), automatic protection$/, m => m[1] + '，自动保护'],
+  [/^(P0\d), evidence-supported assessment$/, m => m[1] + '，有证据支持的评估'],
+  [/^(P0\d), appeal pending$/, m => m[1] + '，申诉处理中'],
+  [/^How RTPL decided: (.+)$/, m => 'RTPL 如何判断（How RTPL decided）：' + m[1]],
+  [/^Delivered at (\S+)\. Waiting for the delay check\.$/, m => m[1] + ' 已送达，等待延误检查。'],
+  [/^(\d\d:\d\d)–(\d\d:\d\d) \((\d+) min\)$/, m => m[1] + '–' + m[2] + '（' + m[3] + ' 分钟）'],
+  [/^Checked\. (\S+) is published to dispatch, rider and customer\.$/, m => '检查完成。' + m[1] + ' 已发布给派单、骑手和顾客。'],
+  [/^(Rider protected|Assessment can proceed)\. (?:Nothing is applied yet\. )?(\d+) min late, (\d+) new credit, (\d+) still unexplained\.$/,
+    m => (m[1] === 'Rider protected' ? '骑手受保护 Rider protected。' : '可以继续评估 Assessment can proceed，目前什么都没生效。') + '迟到 ' + m[2] + ' 分钟，本次抵扣 ' + m[3] + ' 分钟，仍未解释 ' + m[4] + ' 分钟。'],
+  [/^The AI proposed (\d+) min\. A legal route plus service time needs (\d+) min, so the deadline is extended to (\S+)\.$/, m => 'AI 提议 ' + m[1] + ' 分钟。合法路线加服务时间需要 ' + m[2] + ' 分钟，所以截止时间延到 ' + m[3] + '。'],
+  [/^Then (\S+) \+ (\d+) min verified restaurant delay = (\S+)\.$/, m => '之后 ' + m[1] + ' + 已核实的餐厅延误 ' + m[2] + ' 分钟 = ' + m[3] + '。'],
+  [/^Now (\S+) after the 12:20 route change below\.$/, m => '因下方 12:20 的路线变化，现在是 ' + m[1] + '。'],
+  [/^Kept at the previously accepted (\S+)\.$/, m => '保持之前已接受的 ' + m[1] + '。'],
+  [/^Send the AI time: the rider is told (\S+), (\d+) min less than a legal route allows\.$/, m => '直接发送 AI 时间：骑手被告知 ' + m[1] + '，比合法路线所需少 ' + m[2] + ' 分钟。'],
+  [/^Send (\S+) to dispatch, rider and customer alike\.$/, m => '把 ' + m[1] + ' 同样发给派单、骑手和顾客。'],
+  [/^Send the AI time (\S+)\.$/, m => '直接发送 AI 时间 ' + m[1] + '。'],
+  [/^Keep (\S+)\. It already passes the check\.$/, m => '保留 ' + m[1] + '，它已经通过检查。'],
+  [/^Send the AI’s (\S+) anyway, computed from out-of-date data\.$/, m => '照样发送 AI 的 ' + m[1] + '，而它是用过期资料算出来的。'],
+  [/^Overwrite with the new estimate: A101 (\S+), B102 (\S+)\. Earlier than the times already promised\.$/, m => '用新估算直接覆盖：A101 ' + m[1] + '，B102 ' + m[2] + '。比已经承诺的时间更早。'],
+  [/^Add the durations: ([\d +]+) = (\d+) min of outside delay, although only (\d+) minutes actually passed\.$/, m => '把时长直接相加：' + m[1] + ' = ' + m[2] + ' 分钟外部延误，但实际只过去了 ' + m[3] + ' 分钟。'],
+  [/^Merge the overlap: ([\d +]+) − (\d+) overlapping = (\d+) unique minutes, so (\d+) excused and (\d+) left\. Rider protected\.$/, m => '合并重叠：' + m[1] + ' − 重叠 ' + m[2] + ' = ' + m[3] + ' 分钟不重复的时间，所以抵扣 ' + m[4] + ' 分钟，剩余 ' + m[5] + ' 分钟。骑手受保护。'],
+  [/^Excuse the restaurant delay again: (\d+) more minutes excused, nothing left to explain\. The same 10 minutes would count twice\.$/, m => '再抵扣一次餐厅延误：多抵扣 ' + m[1] + ' 分钟，好像没什么要解释的了。但同样的 10 分钟被算了两次。'],
+  [/^Count it once: (\d+) new credit, (\d+) min still unexplained\. The rider is still protected, because nothing shows the rider caused those minutes\.$/, m => '只算一次：本次抵扣 ' + m[1] + '，仍有 ' + m[2] + ' 分钟未解释。骑手仍受保护，因为没有证据显示这几分钟是骑手造成的。'],
+  [/^Late means at fault: (\d+) min late, so all four effects can apply at once\.$/, m => '迟到就算有错：迟到 ' + m[1] + ' 分钟，四项影响可以立刻全部生效。'],
+  [/^Late means at fault: (\d+) min late, so the rider can be penalised for choosing safety\.$/, m => '迟到就算有错：迟到 ' + m[1] + ' 分钟，骑手会因为选择安全而被处罚。'],
+  [/^You were (\d+) minutes late\. Your deadline was already extended by 10 minutes for the restaurant delay, so that delay is not counted again\. Nothing shows you caused the other (\d+) minutes, so nothing affects your score, rating, bonus or future orders\.$/,
+    m => '你迟到了 ' + m[1] + ' 分钟。你的截止时间已经因餐厅延误顺延了 10 分钟，所以这段延误不再重复计算。没有证据显示另外 ' + m[2] + ' 分钟是你造成的，所以你的服务分、评分、奖金和以后的派单都不受影响。'],
+  [/^You were (\d+) minutes late, and verified outside delays cover all of it\. Nothing affects your score, rating, bonus or future orders\.$/,
+    m => '你迟到了 ' + m[1] + ' 分钟，但已核实的外部延误覆盖了全部迟到时间。你的服务分、评分、奖金和以后的派单都不受影响。'],
+  [/^You were (\d+) minutes late because you took a verified safe, legal detour\. That choice is protected: nothing affects your score, rating, bonus or future orders\.$/,
+    m => '你迟到了 ' + m[1] + ' 分钟，因为你走了经核实的安全合法绕行路线。这个选择受保护：你的服务分、评分、奖金和以后的派单都不受影响。'],
+  [/^You were (\d+) minutes late, but the records do not show what caused it\. Nothing affects your score, rating, bonus or future orders\. You do not need to do anything\.$/,
+    m => '你迟到了 ' + m[1] + ' 分钟，但记录无法说明原因。你的服务分、评分、奖金和以后的派单都不受影响，你不需要做任何事。'],
+  [/^You were (\d+) minutes late\. A reliable record shows a stop you made from (\S+)\. This can now be assessed, but nothing has been applied\. If you think the record is wrong, ask for a human review: all four effects pause until a person decides\.$/,
+    m => '你迟到了 ' + m[1] + ' 分钟。可靠记录显示你在 ' + m[2] + ' 期间有停留。这件事现在可以进入评估，但还没有施加任何影响。如果你认为记录有误，可以申请人工复核：在有人作出决定之前，四项影响全部暂停。'],
+  [/^Review requested\. All four effects are paused until a person decides\. Review target: (.+)\.$/, m => '已申请复核。在有人作出决定之前，四项影响全部暂停。复核期限：' + tm(m[1]) + '。'],
+  [/^Your review was decided: reversed\. Reason: (.*?) Nothing affects your score, rating, bonus or future orders\.$/, m => '你的复核结果：已撤销（reversed）。理由：' + TT(m[1]) + ' 你的服务分、评分、奖金和以后的派单都不受影响。'],
+  [/^Your review was decided: upheld\. Reason: (.*)$/, m => '你的复核结果：维持原评估（upheld）。理由：' + TT(m[1])],
+  [/^Appeal filed at (\S+)\. Review target: (.+)\.$/, m => m[1] + ' 已提交申诉。复核期限：' + tm(m[2]) + '。'],
+  [/^Review target missed at (.+)\. The case is escalated and the effects stay suspended\.$/, m => '已错过复核期限（' + tm(m[1]) + '）。案件升级处理，影响继续暂停。'],
+  [/^Decision recorded: (REVERSE|UPHOLD)( \(after the review target\))?\.$/, m => '决定已记录：' + (m[1] === 'REVERSE' ? '撤销 REVERSE' : '维持 UPHOLD') + (m[2] ? '（在复核期限之后）' : '') + '。'],
+  [/^Decision refused: (.+)$/, m => '决定被拒绝：' + TT(m[1])],
+  [/^(\S+(?: tomorrow)?) Dispatch check passed: A101 due (\S+) \(configuration (\S+)\)\.$/, m => tm(m[1]) + ' 派单检查通过：A101 截止 ' + m[2] + '（配置 ' + m[3] + '）。'],
+  [/^(\S+) Dispatch check: A101 due (\S+) \((P0\d), (\S+)\)\.$/, m => m[1] + ' 派单检查：A101 截止 ' + m[2] + '（' + m[3] + '，' + m[4] + '）。'],
+  [/^(\S+) Dispatch held: stale or missing safety inputs \(P01\)\.$/, m => m[1] + ' 派单暂停：安全资料过期或缺失（P01）。'],
+  [/^(\S+) Restaurant delay \(verified\): A101 deadline extended from (\S+) to (\S+)\. Covered (\S+)\.$/, m => m[1] + ' 餐厅延误（已核实）：A101 截止时间从 ' + m[2] + ' 延到 ' + m[3] + '。已补偿时段 ' + m[4] + '。'],
+  [/^(\S+) Delivery completed\.$/, m => m[1] + ' 送达。'],
+  [/^(\S+) Delay check: (P0\d)\. (.+)$/, m => m[1] + ' 延误检查：' + m[2] + '。' + TT(m[3])],
+  [/^(\S+) Appeal filed\. Disputed effects suspended \(P06\)\.$/, m => m[1] + ' 提交申诉。有争议的影响已暂停（P06）。'],
+  [/^(.+?) Human review: (REVERSE|UPHOLD)\. Reason recorded for the rider\.$/, m => tm(m[1]) + ' 人工复核：' + (m[2] === 'REVERSE' ? '撤销 REVERSE' : '维持 UPHOLD') + '。理由已记录并告知骑手。'],
+  [/^(.+?) Review target missed\. Escalated; disputed effects stay suspended\.$/, m => tm(m[1]) + ' 错过复核期限。已升级处理；有争议的影响继续暂停。'],
+  [/^(\S+) (Road closure|Faster route): A101 needs (\S+), published (\S+); B102 needs (\S+), published (\S+)\.$/, m => m[1] + ' ' + (m[2] === 'Road closure' ? '道路封闭' : '路线变快') + '：A101 需要到 ' + m[3] + '，发布 ' + m[4] + '；B102 需要到 ' + m[5] + '，发布 ' + m[6] + '。'],
+  [/^Saved (\S+)\. It contains only the fields in the table\.$/, m => '已保存 ' + m[1] + '，里面只有表格中的这些字段。'],
+  [/^(\d\d:\d\d) tomorrow$/, m => '明天 ' + m[1]]
+];
+
+function expect(s) {
+  const e = T(s) || {
+    '24 min becomes a 34 min budget: 12:34 for everyone': '24 分钟变成 34 分钟预算：大家都看到 12:34',
+    'A101 moves to 12:44, B102 to 12:50': 'A101 变为 12:44，B102 变为 12:50',
+    'Neither time moves earlier': '两个时间都不会提前',
+    'Both show the same updated time': '两边显示同一个更新后的时间',
+    '5 min late, 0 new credit, 5 still unexplained. Rider protected.': '迟到 5 分钟，本次抵扣 0，仍未解释 5 分钟。骑手受保护。',
+    '10 min late, cause not established. Rider protected.': '迟到 10 分钟，原因未确认。骑手受保护。',
+    'Assessment can proceed. Nothing is applied yet.': '可以继续评估 Assessment can proceed。目前什么都没生效。',
+    'Opens Human review. All four effects SUSPENDED.': '打开人工复核页。四项影响全部暂停 SUSPENDED。',
+    'Refused: Reviewer authority is required.': '被拒绝：需要审核权限（Reviewer authority is required.）',
+    'Still SUSPENDED. Time alone cannot uphold a penalty.': '仍然暂停 SUSPENDED。仅凭时间过去不能维持处罚。',
+    'All four effects PROTECTED. Appeal REVERSE.': '四项影响全部受保护 PROTECTED。申诉结果撤销 REVERSE。',
+    'A minimised record: no identity, GPS, raw evidence or free-text reason.': '最小化的记录：没有身份、GPS、原始证据或理由原文。',
+    'Rider protected: a verified safe, legal detour.': '骑手受保护：经核实的安全合法绕行。',
+    '10 unique minutes excused, not 13. Nothing left unexplained.': '抵扣 10 分钟不重复的时间，不是 13 分钟。没有剩下未解释的时间。',
+    'Dispatch held for review. No unchecked deadline published.': '派单暂停待复核。不发布未经检查的截止时间。',
+    'No guessed time is shown to the customer.': '不会给顾客显示一个猜测的时间。',
+    'The checked deadline and its trace update.': '检查后的截止时间和判断过程会更新。',
+    'The decision and trace follow your inputs.': '判断结果和过程会跟着你的输入变化。'
+  }[s];
+  return e || s;
+}
+
+function translate(text) {
+  const t = text.trim();
+  if (!t || !/[A-Za-z]/.test(t)) return null;
+  const exact = T(t);
+  let out = exact;
+  if (out === null) for (const [re, f] of R) { const m = t.match(re); if (m) { out = f(m); break; } }
+  if (out === null) return null;
+  return text.replace(t, out);
+}
+
+/* ---------- apply to the page ---------- */
+const original = new Map();   // text node -> English text
+const SKIP = 'script,style,pre,code,textarea,.t-rule,.brand-mark,[data-no-i18n]';
+
+function walk(root) {
+  if (lang !== 'zh') return;
+  const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  const nodes = [];
+  let n;
+  while ((n = w.nextNode())) nodes.push(n);
+  for (const node of nodes) {
+    const p = node.parentElement;
+    if (!p || p.closest(SKIP)) continue;
+    const src = original.has(node) ? original.get(node) : node.nodeValue;
+    const zh = translate(src);
+    if (zh !== null && zh !== node.nodeValue) { original.set(node, src); node.nodeValue = zh; }
+  }
+}
+
+function restore() {
+  for (const [node, en] of original) if (node.isConnected) node.nodeValue = en;
+  original.clear();
+}
+
+let busy = false;
+const observer = new MutationObserver(() => {
+  if (busy || lang !== 'zh') return;
+  busy = true;
+  try { for (const k of original.keys()) if (!k.isConnected) original.delete(k); walk(document.body); }
+  finally { busy = false; observer.takeRecords(); }
+});
+
+function setButton() {
+  const b = document.getElementById('lang-toggle');
+  if (!b) return;
+  b.textContent = lang === 'zh' ? 'English' : '中文';
+  b.setAttribute('lang', lang === 'zh' ? 'en' : 'zh');
+  b.setAttribute('aria-label', lang === 'zh' ? 'Switch to English 切换到英文' : '切换到中文界面 Switch to Chinese');
+  b.dataset.noI18n = '';
+}
+
+function setLang(next) {
+  lang = next;
+  try { localStorage.setItem(KEY, lang); } catch (e) { /* storage unavailable */ }
+  document.documentElement.lang = lang === 'zh' ? 'zh' : 'en';
+  busy = true;
+  try {
+    restore();
+    if (window.RTPLApp && window.RTPLApp.render) window.RTPLApp.render();
+    walk(document.body);
+    setButton();
+  } finally { busy = false; observer.takeRecords(); }
+}
+
+document.addEventListener('click', e => {
+  if (e.target.closest('#lang-toggle')) setLang(lang === 'zh' ? 'en' : 'zh');
+});
+observer.observe(document.body, {childList: true, subtree: true, characterData: true});
+setLang(lang);
+window.RTPLI18n = {get lang() { return lang; }, setLang, translate};
 })();
 
 </script>
