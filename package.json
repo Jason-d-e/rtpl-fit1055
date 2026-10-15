@@ -1,0 +1,14 @@
+{
+  "name": "rtpl-fit1055",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Deterministic teaching prototype for the Rider Time Protection Layer.",
+  "scripts": {
+    "test": "node --test",
+    "test:core": "node --test test/rtpl-core.test.js",
+    "test:presentation": "node --test test/presentation-contract.test.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
