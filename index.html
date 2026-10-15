@@ -51,6 +51,7 @@ code{font-family:var(--mono);font-size:.88em}
 .brand-mark{font-family:var(--display);font-size:1.75rem;font-weight:700;letter-spacing:.04em;color:var(--gold)}
 .brand-name{font-size:1rem;font-weight:600}
 .topnote{margin:0 0 0 auto;font-size:.82rem;color:#D3E2D9;max-width:32em;text-align:right}
+.topbar .btn{text-decoration:none;white-space:nowrap}
 
 /* ---------- buttons ---------- */
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:42px;padding:9px 16px;border-radius:8px;border:1.5px solid transparent;font-size:.92rem;font-weight:600;cursor:pointer;line-height:1.2;text-align:center}
@@ -429,6 +430,7 @@ main:focus{outline:none}
     <span class="brand-name">Rider Time Protection Layer</span>
   </a>
   <p class="topnote">Teaching prototype. Orders, AI proposals and records are synthetic.</p>
+  <a class="btn btn-on-dark" href="./guided-demo.html">Guided live demo</a>
   <button type="button" id="lang-toggle" class="btn btn-on-dark btn-lang" lang="zh" aria-label="切换到中文界面 Switch to Chinese">中文</button>
   <button type="button" id="reset" class="btn btn-on-dark" data-action="reset">Reset demo</button>
 </header>
@@ -1390,6 +1392,7 @@ const D = {
   'Skip to the prototype': '跳到原型',
   'Rider Time Protection Layer': B('骑手时间保护层', 'Rider Time Protection Layer'),
   'Teaching prototype. Orders, AI proposals and records are synthetic.': '教学原型。订单、AI 提议和各类记录都是模拟数据。',
+  'Guided live demo': B('引导式现场演示', 'Guided live demo'),
   'Reset demo': B('重置演示', 'Reset demo'),
   'RTPL, T1 Mixue Bingcheng, FIT1055 Assignment 2b.': 'RTPL，T1 Mixue Bingcheng，FIT1055 Assignment 2b。',
   'Demonstration only: no real deliveries, model inference, platform connection or measured rider outcomes. Reviewer authority and evidence reliability are simulated.': '仅供演示：没有真实配送、模型推理、平台接入或实测的骑手结果。审核权限和证据可靠性均为模拟。',

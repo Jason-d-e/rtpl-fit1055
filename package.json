@@ -6,7 +6,9 @@
   "scripts": {
     "test": "node --test",
     "test:core": "node --test test/rtpl-core.test.js",
-    "test:presentation": "node --test test/presentation-contract.test.js"
+    "test:presentation": "node --test test/presentation-contract.test.js",
+    "test:guided": "node --test test/guided-domain.test.js test/guided-integration.test.js",
+    "test:browser": "node scripts/browser-smoke.js"
   },
   "engines": {
     "node": ">=18"
