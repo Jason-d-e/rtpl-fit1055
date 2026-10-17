@@ -127,11 +127,16 @@
   const REVIEW04 = C.review(APPEAL04, {authorised: true, outcome: 'REVERSE', reason: REVIEW_REASON, at: 54});
   const AUDIT04 = C.audit({id: 'A101', deadline: CASE['04'].deadline}, REVIEW04);
 
+  /* ---------- the order every scene follows (invented shop, address and app) ---------- */
+  const ORDER = Object.freeze({id: 'A101', restaurant: 'Noodle Kitchen', drop: 'Maple Court, Block 3', unit: 'Unit 1204', km: 4,
+    items: [['Beef noodle soup', 2, 14.5], ['Iced lemon tea', 1, 4.5]], fee: 3.9, dropB: 'Canal Side Apartments'});
+  const ITEMS = ORDER.items.map(([n, q]) => q + ' × ' + n).join(' · ');
+
   /* ---------- phone states ---------- */
-  const restaurant = 'Noodle Kitchen';
+  const restaurant = ORDER.restaurant;
   const rider = {
     idle: (msg) => ({kind: 'idle', msg: msg || 'Waiting for orders nearby'}),
-    offer: (deadline) => ({kind: 'offer', id: 'A101', deadline, km: 4, pickup: restaurant, drop: 'Synthetic customer, Lantern Street'}),
+    offer: (deadline) => ({kind: 'offer', id: 'A101', deadline, km: ORDER.km, pickup: restaurant, drop: ORDER.drop}),
     trip: (stage, orders, banner) => ({kind: 'trip', stage, orders, banner: banner || null}),
     result: (k, opts) => ({kind: 'result', caseNum: k, ...opts})
   };
@@ -142,11 +147,11 @@
   };
 
   function explain(k, d) {
-    if (k === '02') return 'The 10-minute kitchen delay already moved your deadline to 12:44, so it can’t be counted twice. Nothing shows you caused the last 5 minutes, so no effect applies.';
-    if (k === '03') return 'The record of what caused the delay is incomplete. Lateness on its own is not evidence against you, so no effect applies.';
-    if (k === '04') return 'A verified record shows a stop you chose to make from 12:34 to 12:44. An assessment may proceed, but nothing has been deducted. You can see the evidence and ask a person to review it.';
-    if (k === '05') return 'You took a longer, legal route around a flooded underpass. A verified safe choice is never held against you.';
-    if (k === '06') return 'Traffic and the restaurant hand-off overlapped. Their 10 unique minutes cover your whole delay.';
+    if (k === '02') return 'The kitchen’s 10 minutes already gave you until 12:44, so they can’t count twice. Nothing shows you caused the last 5 minutes, so nothing applies.';
+    if (k === '03') return 'No one recorded why the order was late. Being late is not proof, so nothing applies.';
+    if (k === '04') return 'A record shows you stopped from 12:34 to 12:44. This can now be assessed, but nothing has been deducted. You can see the record and ask a person to review it.';
+    if (k === '05') return 'You went around a flooded underpass on a legal route. A safe choice is never held against you.';
+    if (k === '06') return 'Traffic and the restaurant overlapped. Together they cover all 10 minutes.';
     return d.reason;
   }
 
@@ -167,146 +172,160 @@
   }
 
   function compareFor(k, d) {
-    if (k === '02') return {simple: 'Credit the kitchen delay again: 5 min credit, 0 left.', rtpl: 'Those 10 minutes were already added to the deadline: 0 new credit, 5 min unexplained, no rider cause, so protect.'};
-    if (k === '06') return {simple: 'Add both records: 7 + 6 = 13 min.', rtpl: 'Merge the overlap 12:38–12:41: 10 unique minutes, all of the lateness.'};
-    if (k === '03') return {simple: 'Late is late: assessment eligible.', rtpl: 'No reliable cause for the 10 minutes: protect automatically.'};
-    if (k === '04') return {simple: 'Apply the penalty now.', rtpl: 'Eligible only. Nothing applied; evidence shown; appeal open.'};
-    if (k === '05') return {simple: 'Slower route chosen by the rider: rider’s fault.', rtpl: 'A verified safe, legal alternative stays protected.'};
+    if (k === '02') return {simple: 'Count the kitchen delay again: 5 min excused.', rtpl: 'Already used once: 0 new credit. No proof the rider caused the 5 min, so protected.'};
+    if (k === '06') return {simple: 'Add both: 7 + 6 = 13 min.', rtpl: 'They overlap 12:38–12:41: 10 real minutes.'};
+    if (k === '03') return {simple: 'Late means at fault: assess.', rtpl: 'No record of why: protect automatically.'};
+    if (k === '04') return {simple: 'Late with a record: penalise now.', rtpl: 'Assess only. Nothing deducted; record shown; appeal open.'};
+    if (k === '05') return {simple: 'Rider chose a slower route: rider’s fault.', rtpl: 'A safe, legal detour: protected.'};
     return null;
   }
 
   /* ---------- map states ---------- */
   const at = (place) => ({place});
-  const on = (path, t) => ({path, t});
   const pins = list => list;
+
+  /* ---------- the hand-held customer phone (slides 2 and 5) ---------- */
+  const PARTS01 = C.budgetParts(BASE);
+  const hand = (script, stage) => ({script, stage, ai: AI_PROPOSED, parts: PARTS01, deadline: CHECK01.deadline, order: ORDER});
 
   /* ---------- scenes ---------- */
   const SCENES = [
-    {id: 'slide-5', slide: 5, presenter: 'Yanyu Zhu', title: 'A layer around existing AI dispatch', short: 'Overview', group: 'main',
+    {id: 'slide-2', slide: 2, presenter: 'Liyuan Liang', title: 'One lunch order, one tight deadline', short: 'The order', group: 'main',
       beats: [
-        {time: null, center: 'overview', overview: {stage: 0},
-          caption: 'RTPL sits between an existing AI dispatch system and the people it affects. It never picks riders or retrains the model.',
-          note: 'Point at the three RTPL stages, then the five viewers. Press → to send one order through.',
-          rider: rider.idle(), customer: customer.confirming()},
-        {time: 0, center: 'overview', overview: {stage: 1, ai: AI_PROPOSED, out: CHECK01.deadline},
-          caption: 'One order, five viewers. The AI’s 12:24 enters RTPL; only a checked time reaches the rider and the customer. A reviewer and an auditor see the record.',
-          note: 'Watch the order travel through the layer. Next: case 01 on the map.',
-          rider: rider.idle(), customer: customer.confirming()}
+        {time: 0, center: 'handphone', solo: true, hand: hand('order', 0),
+          caption: '12:00. A customer orders lunch from Noodle Kitchen: two beef noodle soups and an iced lemon tea, to Maple Court, 4 km away.',
+          note: 'Let the animation play: open the app, pick the shop, add the food, pay. Press → once it says Order placed.'},
+        {time: 0, center: 'handphone', solo: true, hand: hand('order', 1), result: 'The AI suggests 12:24',
+          caption: 'The order goes to the platform. Its AI picks a rider and suggests a delivery time: 12:24. That is only 24 minutes.',
+          note: 'Point at 12:24. Press → to show what the trip really takes.'},
+        {time: 0, center: 'handphone', solo: true, hand: hand('order', 2), result: '34 min needed, 24 given: 10 min short',
+          caption: 'But the trip really takes 34 minutes: 12 to ride legally, plus 22 for lights, waiting for the food, getting into the building and handing over. Who makes up the missing 10?',
+          note: 'Ask the question, pause two seconds. These are made-up example numbers, not measurements. Back to the slides for 3 and 4.'}
       ]},
 
-    {id: 'slide-6', slide: 6, presenter: 'Yanyu Zhu', title: 'The first check changes the instruction', short: 'First check', group: 'main', caseNum: '01',
+    {id: 'slide-5', slide: 5, presenter: 'Yanyu Zhu', title: 'Where RTPL sits', short: 'Overview', group: 'main',
+      beats: [
+        {time: 2, center: 'handphone', solo: true, hand: hand('status', 0),
+          caption: 'The customer has paid. The app shows each step, and an arrival time of 12:34, not the AI’s 12:24. Why?',
+          note: 'Let the four steps appear. Point at 12:34. Press → to look behind the screen.'},
+        {time: 0, center: 'overview', solo: true, overview: {stage: 1, ai: AI_PROPOSED, out: CHECK01.deadline}, result: 'The AI’s 12:24 goes in. A checked 12:34 comes out.',
+          caption: 'Behind the screen, RTPL sits between the AI and the apps. It checks three times: before the rider gets a time, after delivery, and if the rider disagrees.',
+          note: 'Point at the AI box, the three RTPL steps, then the apps. Next: step 1 on the map.'}
+      ]},
+
+    {id: 'slide-6', slide: 6, presenter: 'Yanyu Zhu', title: 'Check 1: can a rider make it in time?', short: 'First check', group: 'main', caseNum: '01',
       beats: [
         {time: 0, center: 'map',
           map: {rider: at('hub'), pins: pins(['rest', 'custA']), routes: [{path: 'mainA', style: 'planned'}], tags: [{at: [640, 250], text: '4 km legal route'}]},
           engine: deadlineEngine(BASE, AI_PROPOSED, null),
-          caption: 'Order A101, 12:00. The simulated AI proposes delivery by 12:24. Nothing has been sent to the rider or the customer yet.',
-          note: 'Point at the AI bar: 24 min. Rider phone is empty, customer sees Confirming. Press → to run the check.',
+          caption: 'Back to 12:00. The AI suggests 12:24. Before anyone sees it, RTPL asks: can a rider really make it without speeding?',
+          note: 'Point at the red AI bar: 24 min. Both phones show no time yet. Press → to run the check.',
           rider: rider.idle(), customer: customer.confirming()},
-        {time: 0, center: 'map', result: '24 min becomes a 34 min budget: 12:34 for everyone',
+        {time: 0, center: 'map', result: '24 min was 10 short. Everyone gets 12:34.',
           map: {rider: at('hub'), pins: pins(['rest', 'custA']), routes: [{path: 'mainA', style: 'active'}], tags: [{at: [640, 250], text: '4 km at 20 km/h'}]},
           engine: deadlineEngine(BASE, AI_PROPOSED, CHECK01),
-          caption: 'RTPL builds the minimum from a legal route: 12 min of travel plus 22 min for signals, waiting, building access and hand-over. 12:34 goes to everyone.',
-          note: 'Point at the gap: the AI stops 10 min short. Then the rider offer and the customer time: both 12:34.',
+          caption: 'No. Riding 4 km at the legal 20 km/h takes 12 minutes, and the stops along the way add 22. That makes 34, so the rider and the customer both get 12:34.',
+          note: 'Point at the 10 min short box, then both phones: 12:34.',
           rider: rider.offer(CHECK01.deadline), customer: customer.eta(CHECK01.deadline, 'Preparing')},
         {time: 2, center: 'map',
           map: {move: {path: 'toRest', from: 0, to: 1}, pins: pins(['rest', 'custA']), routes: [{path: 'toRest', style: 'pickup'}, {path: 'mainA', style: 'active'}]},
           engine: deadlineEngine(BASE, AI_PROPOSED, CHECK01, {locked: true}),
-          caption: 'The rider accepts. From now on the 12:34 deadline can move later, never earlier.',
-          note: 'The lock icon: an accepted time is protected. Next slide: what happens when the route changes.',
+          caption: 'The rider accepts and heads to Noodle Kitchen. From now on, 12:34 can only move later, never earlier.',
+          note: 'Point at the lock. Next: what happens when the road changes.',
           rider: rider.trip('pickup', [{id: 'A101', deadline: CHECK01.deadline}]), customer: customer.eta(CHECK01.deadline, 'Rider assigned')}
       ]},
 
-    {id: 'slide-7', slide: 7, presenter: 'Yanyu Zhu', title: 'Accepted time survives later changes', short: 'Route change', group: 'main', caseNum: '01',
+    {id: 'slide-7', slide: 7, presenter: 'Yanyu Zhu', title: 'The road changes, the promise holds', short: 'Route change', group: 'main', caseNum: '01',
       beats: [
         {time: ROUTE_NOW, center: 'map',
           map: {rider: at('rest'), pins: pins(['rest', 'custA', 'custB']), routes: [{path: 'mainA', style: 'active'}, {path: 'onToB', style: 'active'}]},
           engine: {kind: 'bundle', stage: 0, rows: bundleRows(0), trace: traceBundle(0)},
-          caption: '12:20. The rider is collecting two orders at Noodle Kitchen: A101 due 12:34 and B102 due 12:42.',
-          note: 'Two accepted orders on one trip. Press → for the road closure.',
+          caption: '12:20. The rider picks up two orders: A101 to Maple Court, due 12:34, and B102 to Canal Side, due 12:42.',
+          note: 'Two orders on one trip. Press → to close a road.',
           rider: rider.trip('pickup', [{id: 'A101', deadline: 34}, {id: 'B102', deadline: B102_ACCEPTED}]), customer: customer.eta(34, 'Rider at restaurant')},
         {time: ROUTE_NOW, center: 'map', result: 'A101 moves to 12:44, B102 to 12:50',
           map: {rider: at('rest'), pins: pins(['rest', 'custA', 'custB']), markers: ['closure'],
             routes: [{path: 'mainA', style: 'blocked'}, {path: 'closureA', style: 'active'}, {path: 'onToB', style: 'active'}]},
           engine: {kind: 'bundle', stage: 1, rows: bundleRows(1), trace: traceBundle(1, CLOSURE, FASTER)},
-          caption: 'A verified road closure on Harbour Road rechecks every accepted order on the trip. A101 moves to 12:44 and B102 to 12:50, published together.',
-          note: 'Point at the closure, the new route, then both new times. The customer phone updates to 12:44.',
-          rider: rider.trip('pickup', [{id: 'A101', deadline: 44, prev: 34}, {id: 'B102', deadline: 50, prev: 42}], {tone: 'info', text: 'Road closure verified. Both deadlines extended.'}),
-          customer: customer.eta(44, 'Rider at restaurant', 'A road closure on the route. Your new arrival time is 12:44.')},
+          caption: 'Harbour Road closes. The detour is longer, so RTPL gives both orders more time: 12:44 and 12:50. The rider and both customers are told together.',
+          note: 'Point at the red closure, the new route, then the table. The customer phone now says 12:44.',
+          rider: rider.trip('pickup', [{id: 'A101', deadline: 44, prev: 34}, {id: 'B102', deadline: 50, prev: 42}], {tone: 'info', text: 'Road closed. Both orders get more time.'}),
+          customer: customer.eta(44, 'Rider at restaurant', 'A road is closed on the way. New arrival time: 12:44.')},
         {time: ROUTE_NOW, center: 'map', result: 'Neither time moves earlier',
           map: {move: {path: 'fasterA', from: 0, to: 0.55}, pins: pins(['rest', 'custA', 'custB']), markers: ['closure'],
             routes: [{path: 'mainA', style: 'blocked'}, {path: 'fasterA', style: 'faster'}, {path: 'onToB', style: 'active'}]},
           engine: {kind: 'bundle', stage: 2, rows: bundleRows(2), trace: traceBundle(2, CLOSURE, FASTER)},
-          caption: 'A faster route appears. A simple overwrite would publish 12:33 and 12:35. RTPL keeps 12:44 and 12:50, because an accepted time only moves later.',
-          note: 'Point at the crossed-out 12:33 / 12:35. Rider and customer both still show 12:44.',
-          rider: rider.trip('delivering', [{id: 'A101', deadline: 44}, {id: 'B102', deadline: 50}], {tone: 'ok', text: 'Faster route found. Your deadlines stay as accepted.'}),
+          caption: 'Then a shortcut opens. A fresh estimate would say 12:33 and 12:35, but RTPL keeps 12:44 and 12:50. A time already promised to the rider never moves earlier.',
+          note: 'Point at the crossed-out 12:33 / 12:35. Both phones still say 12:44. Hand over to Yixuan.',
+          rider: rider.trip('delivering', [{id: 'A101', deadline: 44}, {id: 'B102', deadline: 50}], {tone: 'ok', text: 'Shortcut found. Your times stay the same.'}),
           customer: customer.eta(44, 'On the way', 'Same time as your rider: 12:44.')}
       ]},
 
-    {id: 'slide-8', slide: 8, presenter: 'Yixuan Hu', title: 'External delay earns credit once', short: 'Delay credit', group: 'main', caseNum: '02',
+    {id: 'slide-8', slide: 8, presenter: 'Yixuan Hu', title: 'A delay can only be excused once', short: 'Delay credit', group: 'main', caseNum: '02',
       beats: [
         {time: 34, center: 'map',
           map: {rider: at('rest'), pins: pins(['rest', 'custA']), markers: ['kitchen'], routes: [{path: 'mainA', style: 'active'}]},
           engine: creditEngine('02', false, {hideArrival: true}),
-          caption: 'Case 02. A101 was due at 12:34. Noodle Kitchen was 10 minutes late, verified, so RTPL already moved the deadline to 12:44.',
-          note: 'Blue bar = kitchen delay. Hatching = already added to the deadline. Press → to deliver.',
-          rider: rider.trip('pickup', [{id: 'A101', deadline: 44, prev: 34}], {tone: 'info', text: 'Kitchen delay verified. Deadline now 12:44.'}),
-          customer: customer.eta(44, 'Preparing', 'The restaurant needed more time. New arrival 12:44.')},
+          caption: 'Same order, another day. The kitchen was 10 minutes late, so RTPL already moved the deadline from 12:34 to 12:44.',
+          note: 'Blue bar = kitchen delay. Stripes = already added to the deadline. Press → to deliver.',
+          rider: rider.trip('pickup', [{id: 'A101', deadline: 44, prev: 34}], {tone: 'info', text: 'Kitchen running late. Deadline now 12:44.'}),
+          customer: customer.eta(44, 'Preparing', 'The restaurant needed more time. New arrival time: 12:44.')},
         {time: 49, center: 'map',
           map: {move: {path: 'mainA', from: 0, to: 1}, clockFrom: 44, pins: pins(['rest', 'custA']), markers: ['kitchen'], routes: [{path: 'mainA', style: 'done'}]},
           engine: creditEngine('02', false),
-          caption: 'The rider arrives at 12:49, five minutes after the extended deadline.',
-          note: 'Point at the red 5 min late. Ask: can the same kitchen delay excuse it again? Press →.',
+          caption: 'The rider arrives at 12:49. That is 5 minutes late.',
+          note: 'Point at the red 5 min. Ask: can the kitchen delay excuse it again? Press →.',
           rider: rider.trip('delivered', [{id: 'A101', deadline: 44, completed: 49}]), customer: customer.delivered(49, 44)},
         {time: 49, center: 'map', result: '5 min late, 0 new credit, 5 still unexplained. Rider protected.',
           map: {rider: at('custA'), pins: pins(['rest', 'custA']), markers: ['kitchen'], routes: [{path: 'mainA', style: 'done'}]},
           engine: creditEngine('02', true),
-          caption: 'The same delay cannot excuse the rider twice: 0 new credit, so 5 minutes stay unexplained. Unexplained is not the rider’s fault, so the rider stays protected.',
-          note: 'Read the three numbers 5 / 0 / 5, then the comparison box. Hand over to Shengbao.',
+          caption: 'Can the kitchen excuse those 5 minutes? No, it was already used once. But nothing shows the rider caused them, so the rider is still protected.',
+          note: 'Read 5 / 0 / 5, then the comparison box. Hand over to Shengbao.',
           rider: riderResult('02', D['02']), customer: customer.delivered(49, 44)}
       ]},
 
-    {id: 'slide-9', slide: 9, presenter: 'Shengbao Lu', title: 'Missing evidence triggers protection', short: 'Evidence', group: 'main', caseNum: '03 · 04',
+    {id: 'slide-9', slide: 9, presenter: 'Shengbao Lu', title: 'Late is not the same as at fault', short: 'Evidence', group: 'main', caseNum: '03 · 04',
       phones: ['rider:03', 'rider:04'],
       beats: [
         {time: 44, center: 'compare', compare: {reveal: 0, cases: compareCases()},
-          caption: 'Two deliveries, both due 12:34 and completed at 12:44: ten minutes late. Only the evidence differs.',
+          caption: 'Two riders, both 10 minutes late. The only difference is the evidence.',
           note: 'Left phone is case 03, right phone is case 04. Press → for case 03.',
           riderL: rider.trip('delivered', [{id: 'A101', deadline: 34, completed: 44}]), riderR: rider.trip('delivered', [{id: 'A101', deadline: 34, completed: 44}])},
         {time: 44, center: 'compare', result: '10 min late, cause not established. Rider protected.', compare: {reveal: 1, cases: compareCases()},
-          caption: 'Case 03: the record of what caused the delay is incomplete. Lateness alone is not evidence, so RTPL protects the rider automatically, before any appeal.',
-          note: 'Point at the incomplete record and the green result. Press → for case 04.',
+          caption: 'Case 03: no one recorded why it was late. Being late proves nothing, so the rider is protected automatically.',
+          note: 'Point at the dashed “?” and the green result. Press → for case 04.',
           riderL: riderResult('03', D['03']), riderR: rider.trip('delivered', [{id: 'A101', deadline: 34, completed: 44}])},
         {time: 44, center: 'compare', result: 'Assessment can proceed. Nothing is applied yet.', compare: {reveal: 2, cases: compareCases()},
-          caption: 'Case 04: a verified, reliable record shows a stop the rider chose to make from 12:34 to 12:44. An assessment may proceed. Nothing has been deducted, and the rider sees the evidence.',
-          note: 'Stress: eligible is not penalised. The right phone offers Request human review: next slide.',
+          caption: 'Case 04: a reliable record shows the rider chose to stop for 10 minutes. Now it can be assessed, but nothing is deducted yet, and the rider can see the record.',
+          note: 'Stress: assessed is not punished. The right phone offers Request human review: next slide.',
           riderL: riderResult('03', D['03']), riderR: riderResult('04', D['04'])}
       ]},
 
-    {id: 'slide-10', slide: 10, presenter: 'Shengbao Lu', title: 'An appeal pauses the disputed effects', short: 'Appeal', group: 'main', caseNum: '04',
+    {id: 'slide-10', slide: 10, presenter: 'Shengbao Lu', title: 'Appeal: pause first, then a person decides', short: 'Appeal', group: 'main', caseNum: '04',
       beats: [
         {time: 44, center: 'review', review: {stage: 0, decision: D['04'], trace: traceReview(0)},
-          caption: 'Case 04 continues. The rider disagrees with the assessment and taps Request human review.',
+          caption: 'The case 04 rider disagrees and taps Request human review.',
           note: 'Tap Request human review on the rider phone, or press →.',
           rider: riderResult('04', D['04'], 'available'), customer: customer.delivered(44, 34)},
         {time: 49, center: 'review', result: 'All four effects SUSPENDED.', review: {stage: 1, decision: APPEAL04, trace: traceReview(1)},
-          caption: 'Appeal filed at 12:49. All four disputed effects are suspended at once while an authorised reviewer looks at the case.',
-          note: 'Four chips turn SUSPENDED. The customer phone shows none of this. Optional: untick authority to show a refusal. Press → to decide.',
+          caption: '12:49. All four possible penalties are paused straight away while a person looks at the case.',
+          note: 'Four cards turn purple. The customer sees none of this. Optional: untick authority to show a refusal. Press → to decide.',
           rider: riderResult('04', APPEAL04, 'pending'), customer: customer.delivered(44, 34)},
         {time: 54, center: 'review', result: 'All four effects PROTECTED. Appeal REVERSE.', review: {stage: 2, decision: REVIEW04, trace: traceReview(2, REVIEW04)},
-          caption: 'An authorised reviewer reverses the assessment and records a reason. All four effects are protected again.',
-          note: 'Point at REVERSE and the reason the rider receives. Next: Oversight.',
+          caption: '12:54. A reviewer with authority reverses the decision and writes down why. All four are cleared.',
+          note: 'Point at REVERSE and the reason the rider receives. Next: oversight.',
           rider: riderResult('04', REVIEW04, 'done'), customer: customer.delivered(44, 34)}
       ]},
 
-    {id: 'slide-11', slide: 11, presenter: 'Shengbao Lu', title: 'Oversight needs records and access', short: 'Oversight', group: 'main', caseNum: '04',
+    {id: 'slide-11', slide: 11, presenter: 'Shengbao Lu', title: 'A record for oversight, and nothing more', short: 'Oversight', group: 'main', caseNum: '04',
       beats: [
         {time: 54, center: 'audit', audit: {stage: 0, record: AUDIT04},
-          caption: 'The oversight record keeps what an auditor needs: rule version DEMO-1.0, rule P06, protected true, appeal REVERSE, and each effect separately.',
-          note: 'Point at configuration, policy, appeal and the four effects. Press → for who sees what.',
+          caption: 'RTPL keeps a short record for checking later: which rule version, which rule, the outcome, and each of the four effects.',
+          note: 'Point at DEMO-1.0, P06, REVERSE and the four effects. Press → for who sees what.',
           rider: riderResult('04', REVIEW04, 'done'), customer: customer.delivered(44, 34)},
         {time: 54, center: 'audit', result: 'A minimised record: no identity, GPS, raw evidence or free-text reason.', audit: {stage: 1, record: AUDIT04},
-          caption: 'Each viewer gets only what it needs. The export leaves out identity, GPS, raw evidence and the reviewer’s free-text reason.',
-          note: 'Download audit summary saves the JSON. Then switch back to the slides for slide 12.',
+          caption: 'Each person sees only what they need. The record leaves out who the rider is, GPS, raw evidence and the reviewer’s notes.',
+          note: 'Download audit summary saves the file. Then back to the slides for slide 12.',
           rider: riderResult('04', REVIEW04, 'done'), customer: customer.delivered(44, 34)}
       ]},
 
@@ -316,14 +335,14 @@
         {time: 0, center: 'map',
           map: {rider: at('hub'), pins: pins(['rest', 'custA']), stale: true, routes: [{path: 'mainA', style: 'planned'}]},
           engine: deadlineEngine({...BASE, fresh: false}, AI_PROPOSED, null, {stale: true}),
-          caption: 'Same order as case 01, but the route and service data have not been refreshed. RTPL cannot check the deadline against current conditions.',
+          caption: 'Same order, but the map data is out of date. RTPL cannot check the time against today’s roads.',
           note: 'Press → to run the check.',
           rider: rider.idle(), customer: customer.confirming()},
         {time: 0, center: 'map', result: 'Dispatch held for review. No unchecked deadline published.',
           map: {rider: at('hub'), pins: pins(['rest', 'custA']), stale: true, routes: [{path: 'mainA', style: 'blocked'}]},
           engine: deadlineEngine({...BASE, fresh: false}, AI_PROPOSED, STALE, {stale: true}),
-          caption: 'P01 holds dispatch. No unchecked deadline is published: the customer sees Confirming, and the rider gets no time to chase.',
-          note: 'P01 comes before any arithmetic.',
+          caption: 'So it sends no time at all. The customer sees Confirming, and the rider gets no deadline to chase.',
+          note: 'Rule P01 comes before any arithmetic.',
           rider: rider.idle('Order held for a dispatch check'), customer: customer.confirming()}
       ]},
     {id: 'qa-06', slide: null, presenter: null, title: 'Overlapping outside delays', short: '06 Overlap', group: 'extra', caseNum: '06',
@@ -331,13 +350,13 @@
         {time: 44, center: 'map',
           map: {rider: at('custA'), pins: pins(['rest', 'custA']), markers: ['traffic', 'handoff'], routes: [{path: 'mainA', style: 'done'}]},
           engine: creditEngine('06', false),
-          caption: 'A101 was due at 12:34 and arrived at 12:44. Traffic held the rider 12:34–12:41, and the restaurant hand-off ran 12:38–12:44. Both records are verified.',
+          caption: 'Arrived 12:44, 10 minutes late. Traffic held the rider 12:34–12:41, and the restaurant hand-off ran 12:38–12:44.',
           note: 'Two blue bars overlap. Press →.',
           rider: rider.trip('delivered', [{id: 'A101', deadline: 34, completed: 44}]), customer: customer.delivered(44, 34)},
         {time: 44, center: 'map', result: '10 unique minutes excused, not 13. Nothing left unexplained.',
           map: {rider: at('custA'), pins: pins(['rest', 'custA']), markers: ['traffic', 'handoff'], routes: [{path: 'mainA', style: 'done'}]},
           engine: creditEngine('06', true),
-          caption: 'Adding the records gives 13 minutes. RTPL merges the overlap and counts 10 unique minutes, exactly the lateness.',
+          caption: 'Adding them gives 13 minutes, but they overlap. RTPL counts the 10 real minutes, which covers the whole delay.',
           note: '7 + 6 − 3 overlapping = 10.',
           rider: riderResult('06', D['06']), customer: customer.delivered(44, 34)}
       ]},
@@ -346,18 +365,18 @@
         {time: 34, center: 'map',
           map: {move: {path: 'safeDetour', from: 0, to: 1}, clockFrom: 24, pins: pins(['rest', 'custA']), markers: ['flood'], routes: [{path: 'mainA', style: 'blocked'}, {path: 'safeDetour', style: 'detour'}]},
           engine: creditEngine('05', false),
-          caption: 'A101 was due at 12:34 and arrived at 12:44. The rider avoided a flooded underpass by taking a longer, legal route.',
+          caption: '10 minutes late, because the rider went around a flooded underpass on a longer, legal route.',
           note: 'Press → to check responsibility.',
           rider: rider.trip('delivered', [{id: 'A101', deadline: 34, completed: 44}]), customer: customer.delivered(44, 34)},
         {time: 44, center: 'map', result: 'Rider protected: a verified safe, legal detour.',
           map: {rider: at('custA'), pins: pins(['rest', 'custA']), markers: ['flood'], routes: [{path: 'mainA', style: 'blocked'}, {path: 'safeDetour', style: 'done'}]},
           engine: creditEngine('05', true),
-          caption: 'The extra 10 minutes came from the rider’s own route choice, and that choice was a verified safe, legal alternative. P05 keeps the rider protected.',
+          caption: 'A safe, legal detour is never held against the rider. Rule P05 keeps them protected.',
           note: 'P05 is checked before P04.',
           rider: riderResult('05', D['05']), customer: customer.delivered(44, 34)}
       ]},
     {id: 'sandbox', slide: null, presenter: null, title: 'Sandbox: your own numbers', short: 'Sandbox', group: 'extra', caseNum: null, sandbox: true,
-      beats: [{time: null, center: 'sandbox', caption: 'Change any input. The same rules from rtpl-core.js respond. Nothing here matches the slides.', note: 'Use during questions only.'}]}
+      beats: [{time: null, center: 'sandbox', caption: 'Change any number. The same rules respond. Nothing here matches the slides.', note: 'Use during questions only.'}]}
   ];
 
   function bundleRows(stage) {
@@ -373,8 +392,8 @@
 
   function compareCases() {
     return [
-      {num: '03', title: 'Cause record incomplete', record: 'What caused the delay was not fully recorded.', recordTone: 'missing', decision: D['03'], compare: compareFor('03', D['03'])},
-      {num: '04', title: 'Reliable record of a rider-chosen stop', record: 'Verified stop chosen by the rider, 12:34–12:44, covering the whole delay.', recordTone: 'found', decision: D['04'], compare: compareFor('04', D['04'])}
+      {num: '03', title: 'No record of why', record: 'Nobody recorded what caused the delay.', recordTone: 'missing', decision: D['03'], compare: compareFor('03', D['03'])},
+      {num: '04', title: 'Record: the rider chose to stop', record: 'Reliable record: the rider stopped 12:34–12:44, the whole delay.', recordTone: 'found', decision: D['04'], compare: compareFor('04', D['04'])}
     ];
   }
 
@@ -399,6 +418,6 @@
 
   function byId(id) { return SCENES.find(s => s.id === id) || null; }
 
-  return {SCENES, byId, clock, BASE, AI_PROPOSED, B102_ACCEPTED, ROUTE_NOW, REVIEW_REASON, BOUNDARY, SIMULATED, SANDBOX_DEFAULT, sandbox,
+  return {SCENES, byId, clock, ORDER, ITEMS, BASE, AI_PROPOSED, B102_ACCEPTED, ROUTE_NOW, REVIEW_REASON, BOUNDARY, SIMULATED, SANDBOX_DEFAULT, sandbox,
     results: {CHECK01, CLOSURE, FASTER, STALE, D, APPEAL04, REVIEW04, AUDIT04}, CASE, EFFECTS: C.EFFECTS, CONFIG: C.CONFIG, core: C};
 });

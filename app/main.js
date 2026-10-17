@@ -7,7 +7,7 @@
   const MAIN = SCENES.filter(s => s.group === 'main');
   const reduced = () => window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  const st = {i: 0, b: 0, live: {}, sb: {...S.SANDBOX_DEFAULT}, prev: null, raf: 0, notes: false};
+  const st = {i: 0, b: 0, live: {}, sb: {...S.SANDBOX_DEFAULT}, prev: null, raf: 0, notes: false, timers: []};
 
   /* ---------- navigation ---------- */
   function scene() { return SCENES[st.i]; }
@@ -60,7 +60,7 @@
       el.classList.toggle('done', k >= 0 && k < MAIN.indexOf(s));
     });
     $('tag').innerHTML = (s.slide ? `<span class="slide">Slide ${s.slide}</span><span class="who">${R.esc(s.presenter)}</span>` : '<span class="slide">Q&amp;A extra</span>') +
-      (s.caseNum ? `<span class="case">Case ${R.esc(s.caseNum)}</span>` : '') + '<span>Synthetic order A101</span>';
+      (s.caseNum ? `<span class="case">Case ${R.esc(s.caseNum)}</span>` : '') + '<span>Made-up order A101 · Noodle Kitchen → Maple Court</span>';
     $('title').textContent = s.title;
     const cap = st.live.caption || b.caption;
     const res = st.live.result !== undefined ? st.live.result : b.result;
@@ -70,7 +70,7 @@
     const m = MAIN.indexOf(s);
     $('hint').textContent = st.b < s.beats.length - 1 ? `Step ${st.b + 1} of ${s.beats.length}` : m >= 0 && m < MAIN.length - 1 ? `Next: slide ${MAIN[m + 1].slide}` : s.group === 'main' ? 'Back to the slides' : '';
     $('next').disabled = st.b === s.beats.length - 1 && (m < 0 || m === MAIN.length - 1);
-    $('notes').innerHTML = `<b>${s.slide ? 'Slide ' + s.slide + ' · ' + R.esc(s.presenter) : 'Q&A extra'}</b>${R.esc(b.note || '')}<br><small>Keys: <kbd>→</kbd>/<kbd>Space</kbd> next · <kbd>←</kbd> back · <kbd>R</kbd> restart scene · <kbd>N</kbd> notes · <kbd>5</kbd>–<kbd>9</kbd>, <kbd>0</kbd>=10, <kbd>1</kbd>=11 jump</small>`;
+    $('notes').innerHTML = `<b>${s.slide ? 'Slide ' + s.slide + ' · ' + R.esc(s.presenter) : 'Q&A extra'}</b>${R.esc(b.note || '')}<br><small>Keys: <kbd>→</kbd>/<kbd>Space</kbd> next · <kbd>←</kbd> back · <kbd>R</kbd> restart scene · <kbd>N</kbd> notes · <kbd>2</kbd>, <kbd>5</kbd>–<kbd>9</kbd>, <kbd>0</kbd>=10, <kbd>1</kbd>=11 jump</small>`;
     $('notes').hidden = !st.notes;
     if (location.hash !== hashFor()) history.replaceState(null, '', hashFor());
   }
@@ -88,6 +88,7 @@
         : {kind: 'offer', id: 'A101', deadline: out.check.deadline, km: st.sb.distance, pickup: 'Noodle Kitchen', drop: 'Synthetic customer'};
       return [{kind: 'form'}, {kind: 'rider', state: rider, label: 'Sandbox rider · deadline ' + (ok ? S.clock(out.check.deadline) : 'held')}];
     }
+    if (b.solo) return [{kind: 'none'}, {kind: 'none'}];
     if (s.phones) return [{kind: 'rider', state: b.riderL, label: 'Rider · case 03'}, {kind: 'rider', state: b.riderR, label: 'Rider · case 04'}];
     let rider = b.rider;
     const ld = st.live.decision;
@@ -99,17 +100,24 @@
   function renderPhones(force) {
     const t = beat().time === null ? 0 : beat().time;
     const [l, r] = phoneStates();
-    const html = p => p.kind === 'form' ? R.sandboxForm(st.sb) : p.kind === 'rider' ? R.riderPhone(p.state, t, p.label) : R.customerPhone(p.state, t);
+    const html = p => p.kind === 'none' ? '' : p.kind === 'form' ? R.sandboxForm(st.sb) : p.kind === 'rider' ? R.riderPhone(p.state, t, p.label) : R.customerPhone(p.state, t);
     const key = p => JSON.stringify(p) + t;
     if (force || key(l) !== lastPhone.left) { $('left').innerHTML = html(l); lastPhone.left = key(l); }
     if (force || key(r) !== lastPhone.right) { $('right').innerHTML = html(r); lastPhone.right = key(r); }
+    document.querySelector('.floor').classList.toggle('solo', !!beat().solo);
   }
 
   /* ---------- centre ---------- */
   function renderCenter(prev, animate) {
     const s = scene(), b = beat(), c = $('center');
     cancelAnimationFrame(st.raf);
-    if (b.center === 'map') {
+    clearTimers();
+    if (b.center === 'handphone') {
+      c.innerHTML = R.handPhone(b.hand);
+      handFx(b.hand, prev && prev.scene === s ? prev : null, animate);
+      const grow = !(prev && prev.beat && prev.beat.hand && prev.beat.hand.stage >= 2);
+      bars(grow && animate);
+    } else if (b.center === 'map') {
       const samePrev = prev && prev.scene === s && prev.beat && prev.beat.map && prev.b === st.b - 1;
       c.innerHTML = R.mapHtml(b.map, b.time, samePrev ? prev.beat.map.routes : null) + R.engine(b.engine);
       placeRider(b, prev, animate && samePrev || (animate && b.map.move));
@@ -183,6 +191,83 @@
     fly(mk(out, true), [g.r - 30, cu.cy], [(g.r + cu.l) / 2, cu.cy], 1450, 900, false);
   }
 
+  /* ---------- the hand-held phone: ordering (slide 2) and order status (slide 5) ---------- */
+  function later(ms, fn) { st.timers.push(setTimeout(fn, ms)); }
+  function clearTimers() { st.timers.forEach(clearTimeout); st.timers = []; }
+
+  function handFx(h, prev, animate) {
+    const hp = $('hp'), cam = $('hp-cam'), dev = $('hp-dev'), scr = $('hp-screen'), finger = $('hp-finger');
+    if (!hp) return;
+    const show = (name, arg) => { scr.innerHTML = R.apScreen(name, h, arg); };
+    // Position inside the (possibly zoomed) device, in unscaled device pixels.
+    const local = el => {
+      const d = dev.getBoundingClientRect(), r = el.getBoundingClientRect(), k = d.width / dev.offsetWidth || 1;
+      return [(r.left + r.width / 2 - d.left) / k, (r.top + r.height / 2 - d.top) / k];
+    };
+    const place = (x, y, instant) => {
+      if (instant) finger.style.transition = 'none';
+      finger.style.left = (x - finger.offsetWidth * 0.471) + 'px';
+      finger.style.top = (y - finger.offsetHeight * 0.0133) + 'px';
+      if (instant) { void finger.offsetWidth; finger.style.transition = ''; }
+    };
+    const park = instant => place(dev.offsetWidth * 1.3, dev.offsetHeight * 1.08, instant);
+    const point = sel => { const t = scr.querySelector(sel); if (t) place(...local(t)); };
+    const tap = sel => {
+      const t = scr.querySelector(sel); if (!t) return;
+      const [x, y] = local(t);
+      finger.classList.add('press'); later(150, () => finger.classList.remove('press'));
+      t.classList.add('tapped');
+      const rip = document.createElement('span'); rip.className = 'hp-ripple'; rip.style.left = x + 'px'; rip.style.top = y + 'px';
+      dev.appendChild(rip); later(650, () => rip.remove());
+    };
+    if (animate && !reduced() && h.script === 'order' && h.stage === 0) {
+      // Start close on the top half of the screen, with no transition into the close-up.
+      cam.style.transition = 'none'; cam.classList.remove('mid'); cam.classList.add('zoom'); show('home');
+      void cam.offsetWidth; cam.style.transition = '';
+    }
+    park(true);
+    if (!animate || reduced()) return;
+
+    if (h.script === 'status') {
+      [1, 2, 3, 4].forEach((n, i) => later(i * 1300, () => show('status', n)));
+      return;
+    }
+    if (h.stage === 0) {
+      const items = [...document.querySelectorAll('#hp-guide li')];
+      const guide = k => items.forEach((li, i) => { li.classList.toggle('on', i <= k); li.classList.toggle('now', i === k); });
+      guide(0);
+      const steps = [
+        [1100, () => { cam.classList.remove('zoom'); cam.classList.add('mid'); }],
+        [1800, () => { guide(1); point('[data-tap="rest"]'); }], [2500, () => tap('[data-tap="rest"]')], [2750, () => { guide(2); show('menu', {soup: 0, tea: 0}); }],
+        [3300, () => point('[data-tap="add-soup"]')], [3950, () => tap('[data-tap="add-soup"]')], [4050, () => show('menu', {soup: 1, tea: 0})],
+        [4450, () => tap('[data-tap="add-soup"]')], [4550, () => show('menu', {soup: 2, tea: 0})],
+        [5050, () => point('[data-tap="add-tea"]')], [5700, () => tap('[data-tap="add-tea"]')], [5800, () => show('menu', {soup: 2, tea: 1})],
+        [6300, () => point('[data-tap="cart"]')], [6950, () => tap('[data-tap="cart"]')], [7150, () => show('checkout')],
+        [7750, () => { guide(3); point('[data-tap="pay"]'); }], [8400, () => tap('[data-tap="pay"]')], [8550, () => show('paying')],
+        [8800, () => park()], [9600, () => { guide(4); show('paid'); }]
+      ];
+      steps.forEach(([ms, fn]) => later(ms, fn));
+      return;
+    }
+    const fromCentre = prev && prev.beat && prev.beat.hand && prev.beat.hand.stage === 0;
+    if (h.stage === 1 && fromCentre) {
+      // Slide the phone left, then send the order ticket into the AI dispatch panel.
+      hp.classList.remove('with-side'); cam.classList.add('mid'); hp.classList.add('anim');
+      void hp.offsetWidth;
+      hp.classList.add('with-side'); cam.classList.remove('mid');
+      later(1000, () => {
+        const src = scr.querySelector('#ap-ticket'), dst = $('be-ticket');
+        if (!src || !dst) return;
+        const box = hp.getBoundingClientRect(), a = src.getBoundingClientRect(), b = dst.getBoundingClientRect();
+        const fly = document.createElement('div'); fly.className = 'hp-fly'; fly.textContent = h.order.id + ' · ' + h.order.restaurant + ' → ' + h.order.drop;
+        hp.appendChild(fly);
+        const kf = [{left: a.left - box.left + 'px', top: a.top - box.top + 'px', width: a.width + 'px', opacity: 1},
+                    {left: b.left - box.left + 'px', top: b.top - box.top + 'px', width: b.width + 'px', opacity: 1}];
+        fly.animate(kf, {duration: 900, easing: 'cubic-bezier(.5,0,.3,1)', fill: 'both'}).onfinish = () => { dst.classList.add('landed'); fly.remove(); };
+      });
+    }
+  }
+
   /* ---------- sandbox ---------- */
   function sandboxCompute() {
     try { st.sbErr = null; return S.sandbox(st.sb); } catch (e) { st.sbErr = e.message; return null; }
@@ -238,7 +323,7 @@
     if (!t) { if (!e.target.closest('#qa')) closeQA(); return; }
     if (t.id === 'next') return next();
     if (t.id === 'prev') return back();
-    if (t.id === 'restart') return go(st.i, 0, false);
+    if (t.id === 'restart') return go(st.i, 0, true);
     if (t.id === 'notes-btn') return toggleNotes();
     if (t.id === 'qa-btn') { const q = $('qa'); const open = !q.classList.contains('open'); q.classList.toggle('open', open); t.setAttribute('aria-expanded', open); return; }
     if (t.dataset.go) { closeQA(); const i = SCENES.findIndex(s => s.id === t.dataset.go); return go(i, 0, true); }
@@ -270,7 +355,7 @@
     const k = e.key;
     if (k === 'ArrowRight' || k === 'PageDown' || k === ' ') { e.preventDefault(); next(); }
     else if (k === 'ArrowLeft' || k === 'PageUp') { e.preventDefault(); back(); }
-    else if (k === 'r' || k === 'R') go(st.i, 0, false);
+    else if (k === 'r' || k === 'R') go(st.i, 0, true);
     else if (k === 'n' || k === 'N') toggleNotes();
     else if (k === 'Escape') closeQA();
     else if (/^[0-9]$/.test(k)) {
@@ -281,7 +366,7 @@
   });
 
   window.addEventListener('hashchange', () => { if (location.hash !== hashFor() && fromHash()) render(null, false); });
-  let rz; window.addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => { if (beat().center === 'overview') renderCenter(null, false); }, 150); });
+  let rz; window.addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => { if (beat().center === 'overview' || beat().center === 'handphone') renderCenter(null, false); }, 150); });
 
   buildRail();
   fromHash();

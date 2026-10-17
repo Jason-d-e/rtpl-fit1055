@@ -16,6 +16,22 @@ const R = globalThis.RTPLRender;
 
 const beat = (id, k) => S.byId(id).beats[k];
 
+test('Slide 2: the order story uses the same 24 min proposal and the core 34 min breakdown', () => {
+  const h = beat('slide-2', 2).hand;
+  assert.equal(h.ai, 24);
+  assert.deepEqual([h.parts.travel, h.parts.signals, h.parts.wait, h.parts.access, h.parts.handover, h.parts.total], [12, 4, 10, 6, 2, 34]);
+  const html = R.handPhone(h);
+  assert.ok(html.includes('12:24') && html.includes('34 min') && html.includes('10 min short'));
+  assert.ok(R.apScreen('checkout', h).includes('$37.40'), '2 × 14.50 + 4.50 + 3.90 delivery');
+});
+
+test('Slide 5: the customer app shows the checked 12:34, never the AI time', () => {
+  const h = beat('slide-5', 0).hand;
+  const html = R.apScreen('status', h);
+  assert.ok(html.includes('12:34') && !html.includes('12:24'));
+  assert.ok(!R.apScreen('status', h, 3).includes('12:34'), 'no time before the rider is assigned');
+});
+
 test('Slide 6: the AI proposal is extended to the checked floor and published to both apps', () => {
   const b = beat('slide-6', 1);
   assert.equal(b.engine.res.deadline, 34);
@@ -87,6 +103,7 @@ test('Every beat of every scene renders without throwing', () => {
     if (b.map) assert.ok(R.mapHtml(b.map, b.time, null).includes('id="rider"'));
     if (b.engine) assert.ok(R.engine(b.engine).includes('class="engine"'));
     if (b.overview) assert.ok(R.overview(b.overview).includes('ov-rtpl'));
+    if (b.hand) assert.ok(R.handPhone(b.hand).includes('id="hp-screen"'));
     if (b.compare) assert.ok(R.compare(b.compare).includes('casecard'));
     if (b.review) assert.ok(R.review(b.review, {}).includes('fx-card'));
     if (b.audit) assert.ok(R.audit(b.audit).includes('audit-json'));

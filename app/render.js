@@ -25,7 +25,7 @@
         <h3>${esc(r.id)} · ${r.km} km</h3>
         <div style="font-size:.72rem;color:var(--muted)">Deliver by</div><div class="bigtime">${clock(r.deadline)}</div>
         <ol class="stops"><li><b>P</b><span>${esc(r.pickup)}</span></li><li class="drop"><b>D</b><span>${esc(r.drop)}</span></li></ol></div>
-        <div class="card"><p>This time already includes a legal travel speed, traffic signals, restaurant waiting, building access and hand-over.</p></div>
+        <div class="card"><p>Checked: you can make this at the legal speed, including lights, waiting for food, the building and hand-over.</p></div>
         <button class="btn-y pulse" data-act="next">Accept order</button>`;
     } else if (r.kind === 'trip') {
       const stageText = {pickup: 'Collecting at Noodle Kitchen', delivering: 'Delivering', delivered: 'Delivered'}[r.stage] || '';
@@ -33,7 +33,7 @@
         <div class="due">${o.prev !== undefined ? `<span class="was">${clock(o.prev)}</span>` : ''}<strong class="${o.prev !== undefined ? 'flash' : ''}">${clock(o.deadline)}</strong>${o.completed !== undefined ? (o.completed > o.deadline ? (o.completed - o.deadline) + ' min after deadline' : 'on time') : 'due'}</div></div>`).join('');
       body = `<div class="card"><div style="display:flex;justify-content:space-between;align-items:center"><h3 style="margin:0">${stageText}</h3><span class="shield">${ICON.shield}Protected</span></div>${rows}</div>${miniMap(r.track || defaultTrack(r.stage))}`;
       if (r.stage === 'delivered') body += `<div class="card"><p><span class="dots3"><span></span><span></span><span></span></span> Checking what caused any delay…</p></div>`;
-      else body += `<div class="card"><p>Your deadline can be extended when conditions change. It never moves earlier once you accept.</p></div>`;
+      else body += `<div class="card"><p>If the road changes, you get more time. Once accepted, your time never moves earlier.</p></div>`;
     } else if (r.kind === 'result') {
       const eff = Object.entries(r.effects).map(([k, v]) => `<div class="chip ${chipClass(v)}">${esc(k)}<small>${esc(label4(v))}</small></div>`).join('');
       let appeal = '';
@@ -72,7 +72,7 @@
 
   function customerPhone(c, time) {
     if (!c) return '';
-    let body = `<div class="rest-hero"><div class="logo">${ICON.bowl}</div><div><strong>${esc(c.restaurant)}</strong><small>Synthetic restaurant · order A101</small></div></div>`;
+    let body = `<div class="rest-hero"><div class="logo">${ICON.bowl}</div><div><strong>${esc(c.restaurant)}</strong><small>${esc(S.ITEMS)}</small></div></div>`;
     if (c.kind === 'confirming') {
       body += `<div class="card"><h3>Confirming your delivery time <span class="dots3"><span></span><span></span><span></span></span></h3><p>A time appears here once it has been checked. No guessed time is shown.</p></div>`;
     } else if (c.kind === 'eta') {
@@ -124,9 +124,9 @@
     if (kind === 'rest') return `<g transform="translate(${p.x} ${p.y})"><rect x="-19" y="-19" width="38" height="38" rx="10" fill="#1F262D"/><g transform="translate(-11 -11)">${ICON.bowl}</g>
       <g transform="translate(-58 -52)"><rect width="116" height="24" rx="12" fill="#fff" stroke="#1F262D" stroke-width="1.5"/><text class="m-pin-label" x="58" y="16.5" text-anchor="middle">Noodle Kitchen</text></g></g>`;
     if (kind === 'hub') return '';
-    const lab = kind === 'custA' ? 'A101' : 'B102';
+    const lab = kind === 'custA' ? 'A101 · Maple Court' : 'B102 · Canal Side', w = 16 + lab.length * 7;
     return `<g transform="translate(${p.x} ${p.y})"><circle r="19" fill="#fff" stroke="#1F262D" stroke-width="3"/><path d="M-9 1 0 -8 9 1M-6 -1v9h12v-9" fill="none" stroke="#1F262D" stroke-width="2.6" stroke-linejoin="round"/>
-      <g transform="translate(-26 24)"><rect width="52" height="22" rx="11" fill="#1F262D"/><text x="26" y="15.5" text-anchor="middle" fill="#fff" font-size="12.5" font-weight="700" font-family="Bricolage, sans-serif">${lab}</text></g></g>`;
+      <g transform="translate(${kind === 'custA' ? -w + 22 : -w / 2} 24)"><rect width="${w}" height="22" rx="11" fill="#1F262D"/><text x="${w / 2}" y="15.5" text-anchor="middle" fill="#fff" font-size="12.5" font-weight="700" font-family="Bricolage, sans-serif">${lab}</text></g></g>`;
   }
 
   function bubble(x, y, text, color, dx, dy, icon) {
@@ -168,11 +168,12 @@
       <p class="src">Values come from this run of <code>rtpl-core.js</code>. Highlighted lines decided the result.</p></div>`;
   }
 
+  const SEG_NAMES = ['Ride', 'Lights', 'Food wait', 'Building', 'Hand-over'];
   function engineDeadline(e) {
     const p = e.parts, res = e.res, scale = Math.max(40, Math.ceil(((p ? p.total : 0) + 4) / 10) * 10, e.proposed + 6);
     const pc = v => (v / scale * 100).toFixed(2);
     let x = 0;
-    const segs = p ? [['Travel', p.travel], ['Signals', p.signals], ['Restaurant', p.wait], ['Building', p.access], ['Hand-over', p.handover]].map(([n, v], i) => {
+    const segs = p ? SEG_NAMES.map((n, i) => [n, [p.travel, p.signals, p.wait, p.access, p.handover][i]]).map(([n, v], i) => {
       const left = x; x += v;
       return `<div class="seg p${i}" data-w="${pc(v)}" style="left:${pc(left)}%;width:0"><span>${n} ${Math.round(v * 10) / 10}</span></div>`;
     }).join('') : `<div style="position:absolute;left:.6rem;top:50%;transform:translateY(-50%);font-size:.74rem;color:#8995A1;font-style:italic">${res && res.status === 'HOLD' ? 'Not calculated: inputs are stale' : 'Not checked yet'}</div>`;
@@ -180,24 +181,24 @@
     let ticks = '';
     for (let m = 0; m <= scale; m += 10) ticks += `<span style="left:${pc(m)}%">${clock(m)}</span>`;
     let pub;
-    if (!res) pub = `<span class="t none">—</span><p><b>Nothing sent.</b> The rider and the customer see no time until the check runs.</p>`;
-    else if (res.status === 'HOLD') pub = `<span class="t hold">HOLD</span><p><b>Dispatch held for review.</b> No unchecked deadline published. P01: ${esc(res.reason)}</p>`;
-    else pub = `<span class="t">${clock(res.deadline)}</span><p><b>Published to rider and customer.</b><br>max(AI ${e.proposed}, floor ${res.floor}) = ${res.deadline} min</p>${e.locked ? `<span class="lock">${ICON.lock}Accepted · only later</span>` : ''}`;
-    return `<div class="engine"><div class="calc"><div class="e-head"><span class="title">Dispatch console · order A101</span><h3>${e.stale ? 'Route data: out of date' : 'Route data: current'}</h3></div>
-      <div class="bars"><div class="lbl"><b>AI proposal</b>simulated model</div><div class="track"><div class="seg ai" data-w="${pc(e.proposed)}" style="left:0;width:0"><span>${e.proposed} min → ${clock(e.proposed)}</span></div>${gap}</div>
-      <div class="lbl"><b>RTPL minimum</b>legal route + service</div><div class="track">${segs}</div>
+    if (!res) pub = `<span class="t none">—</span><p><b>Nothing sent yet.</b> No one sees a time until it is checked.</p>`;
+    else if (res.status === 'HOLD') pub = `<span class="t hold">HOLD</span><p><b>Dispatch held for review.</b> No unchecked deadline published.</p>`;
+    else pub = `<span class="t">${clock(res.deadline)}</span><p><b>Sent to the rider and the customer.</b><br>The longer of AI ${e.proposed} and real trip ${res.floor} = ${res.deadline} min</p>${e.locked ? `<span class="lock">${ICON.lock}Accepted · only later</span>` : ''}`;
+    return `<div class="engine"><div class="calc"><div class="e-head"><span class="title">Check 1 · order A101</span><h3>${e.stale ? 'Map data: out of date' : 'Map data: up to date'}</h3></div>
+      <div class="bars"><div class="lbl"><b>AI says</b>simulated</div><div class="track"><div class="seg ai" data-w="${pc(e.proposed)}" style="left:0;width:0"><span>${e.proposed} min → ${clock(e.proposed)}</span></div>${gap}</div>
+      <div class="lbl"><b>Real trip</b>legal speed + stops</div><div class="track">${segs}</div>
       <div></div><div class="axis">${ticks}</div></div>
-      ${p ? `<div class="formula">Travel ${Math.round(p.travel * 10) / 10} + Signals ${p.signals} + Restaurant ${p.wait} + Building ${p.access} + Hand-over ${p.handover} = <b>${p.total} min</b></div>` : ''}
+      ${p ? `<div class="formula">Ride ${Math.round(p.travel * 10) / 10} + Lights ${p.signals} + Food wait ${p.wait} + Building ${p.access} + Hand-over ${p.handover} = <b>${p.total} min</b></div>` : ''}
       <div class="publish">${pub}</div></div>${trace(e.trace)}</div>`;
   }
 
   function engineBundle(e) {
     const rows = e.rows.map(r => `<tr><td class="id">${r.id}</td><td><span class="tm">${clock(r.accepted)}</span></td>
       <td>${r.closure === null ? '<span class="pending">—</span>' : `<span class="tm">${clock(r.closure)}</span><span class="badge later">later</span>`}</td>
-      <td>${r.faster === null ? '<span class="pending">—</span>' : `<span class="tm">${clock(r.faster)}</span><span class="badge kept">kept</span><span class="strike">overwrite would say <s>${clock(r.overwrite)}</s></span>`}</td></tr>`).join('');
-    return `<div class="engine"><div class="calc"><div class="e-head"><span class="title">Every accepted order on the trip is rechecked</span><h3>Recheck at ${clock(S.ROUTE_NOW)}</h3></div>
-      <table class="otable"><thead><tr><th>Order</th><th>Accepted</th><th>After road closure</th><th>After faster route</th></tr></thead><tbody>${rows}</tbody></table>
-      <div class="publish" style="margin-top:auto"><p>${e.stage === 0 ? '<b>Waiting for a route change.</b> Both deadlines were accepted and are shown to rider and customers.' : e.stage === 1 ? '<b>Both updates published together.</b> If one order’s data were missing, the whole batch would be held.' : '<b>A shorter estimate cannot pull an accepted time earlier.</b> deadline = max(accepted, new floor)'}</p></div></div>
+      <td>${r.faster === null ? '<span class="pending">—</span>' : `<span class="tm">${clock(r.faster)}</span><span class="badge kept">kept</span><span class="strike">new estimate <s>${clock(r.overwrite)}</s></span>`}</td></tr>`).join('');
+    return `<div class="engine"><div class="calc"><div class="e-head"><span class="title">Both orders on the trip are checked again</span><h3>${clock(S.ROUTE_NOW)}</h3></div>
+      <table class="otable"><thead><tr><th>Order</th><th>Promised</th><th>Road closed</th><th>Shortcut opens</th></tr></thead><tbody>${rows}</tbody></table>
+      <div class="publish" style="margin-top:auto"><p>${e.stage === 0 ? '<b>Both times are promised.</b> The rider and both customers can see them.' : e.stage === 1 ? '<b>Longer route, more time.</b> Both orders are updated together.' : '<b>Shorter route, same time.</b> A promised time never moves earlier.'}</p></div></div>
       ${trace(e.trace)}</div>`;
   }
 
@@ -229,19 +230,116 @@
     return '';
   }
 
+  /* ---------- the hand-held customer phone (slides 2 and 5) ---------- */
+  const money = n => '$' + n.toFixed(2);
+  const AI = {
+    search: '<svg viewBox="0 0 16 16" width="1em" height="1em" aria-hidden="true"><circle cx="7" cy="7" r="4.6" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="m10.4 10.4 3.4 3.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
+    check: '<svg viewBox="0 0 16 16" width="1em" height="1em" aria-hidden="true"><path d="m3.5 8.4 3 3 6-6.4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    bowl: '<svg viewBox="0 0 24 24" width="100%" height="100%" aria-hidden="true"><path fill="#FFC20E" d="M3 11h18a9 9 0 0 1-18 0Z"/><path d="M7 5c0 1.5 1.5 1.5 1.5 3S7 9.5 7 9.5M11 4c0 1.5 1.5 1.5 1.5 3S11 8.5 11 8.5M15 5c0 1.5 1.5 1.5 1.5 3S15 9.5 15 9.5" fill="none" stroke="#FFC20E" stroke-width="1.4" stroke-linecap="round"/></svg>'
+  };
+  const MENU = [
+    {key: 'soup', name: 'Beef noodle soup', desc: 'Braised beef, hand-pulled noodles', price: 14.5},
+    {key: null, name: 'Spicy wonton noodles', desc: 'Pork wontons, chilli oil', price: 13},
+    {key: 'tea', name: 'Iced lemon tea', desc: 'Fresh lemon, less sugar', price: 4.5}
+  ];
+  const STATUS = [['Payment successful', 0], ['Finding a rider…', 0], ['Noodle Kitchen accepted your order', 1], ['Rider heading to Noodle Kitchen', 2]];
+
+  // One screen of the invented customer app. name: home | menu | checkout | paying | paid | status
+  function apScreen(name, h, arg) {
+    const o = h.order, sub = o.items.reduce((a, [, q, p]) => a + q * p, 0);
+    let time = 0, body = '';
+    if (name === 'home') {
+      body = `<div class="ap-top"><small>Deliver to</small><b>${esc(o.drop)} ▾</b></div>
+        <div class="ap-search">${AI.search}<span>Noodles, dumplings, tea…</span></div>
+        <div class="ap-chips"><span class="on">Noodles</span><span>Dumplings</span><span>Drinks</span></div>
+        <h4 class="ap-h">Near you</h4>
+        <div class="ap-rest" data-tap="rest"><div class="ap-img a">${AI.bowl}</div><div><b>${esc(o.restaurant)}</b><small>★ 4.7 · ${o.km}.0 km · Noodles</small></div></div>
+        <div class="ap-rest"><div class="ap-img b"></div><div><b>Dumpling House</b><small>★ 4.5 · 2.1 km · Dumplings</small></div></div>
+        <div class="ap-rest"><div class="ap-img c"></div><div><b>Green Bowl</b><small>★ 4.6 · 3.3 km · Salads</small></div></div>`;
+    } else if (name === 'menu') {
+      const q = arg || {soup: 0, tea: 0}, n = q.soup + q.tea;
+      const total = MENU.reduce((a, m) => a + (m.key ? q[m.key] * m.price : 0), 0);
+      body = `<div class="ap-mhead"><span class="ap-back">‹</span><div><b>${esc(o.restaurant)}</b><small>★ 4.7 · ${o.km}.0 km away</small></div></div>
+        ${MENU.map(m => `<div class="ap-item"><div class="ap-thumb ${m.key || 'x'}"></div><div class="ap-it"><b>${m.name}</b><small>${m.desc}</small><span>${money(m.price)}</span></div>
+          <span class="ap-add ${m.key && q[m.key] ? 'on' : ''}" ${m.key ? `data-tap="add-${m.key}"` : ''}>${m.key && q[m.key] ? q[m.key] : '+'}</span></div>`).join('')}
+        ${n ? `<div class="ap-cart" data-tap="cart"><span class="n">${n}</span><b>View cart</b><span>${money(total)}</span></div>` : ''}`;
+    } else if (name === 'checkout') {
+      body = `<div class="ap-mhead"><span class="ap-back">‹</span><div><b>Checkout</b><small>${esc(o.restaurant)}</small></div></div>
+        <div class="ap-box"><small>Deliver to</small><b>${esc(o.drop)}</b><span>${esc(o.unit)}</span></div>
+        <div class="ap-box ap-lines">${o.items.map(([n, q, p]) => `<p><span>${q} × ${esc(n)}</span><span>${money(q * p)}</span></p>`).join('')}
+          <p class="mut"><span>Delivery fee</span><span>${money(o.fee)}</span></p><p class="tot"><span>Total</span><span>${money(sub + o.fee)}</span></p></div>
+        <div class="ap-box"><small>Pay with</small><b>Saved card</b></div>
+        <div class="ap-pay" data-tap="pay">Pay ${money(sub + o.fee)}</div>`;
+    } else if (name === 'paying') {
+      body = `<div class="ap-center"><div class="ap-spin"></div><b>Paying…</b></div>`;
+    } else if (name === 'paid') {
+      body = `<div class="ap-center"><div class="ap-ok">${AI.check}</div><b>Order placed</b><span>Order ${esc(o.id)} · ${clock(0)}</span></div>
+        <div class="ap-box ap-ticket" id="ap-ticket"><small>${esc(o.restaurant)} → ${esc(o.drop)}</small>${o.items.map(([n, q]) => `<b>${q} × ${esc(n)}</b>`).join('')}</div>
+        <p class="ap-note">Sending to the restaurant and the delivery platform…</p>`;
+    } else if (name === 'status') {
+      const n = arg === undefined ? STATUS.length : arg, done = n >= STATUS.length;
+      time = n ? STATUS[n - 1][1] : 0;
+      body = `<div class="ap-mhead"><div><b>Order ${esc(o.id)}</b><small>${esc(o.restaurant)} → ${esc(o.drop)}</small></div></div>
+        <div class="ap-eta ${done ? 'on' : ''}"><small>${done ? 'Arrives by' : 'Arrival time'}</small><b>${done ? clock(h.deadline) : 'Confirming…'}</b>${done ? `<span>${AI.check} Time checked</span>` : ''}</div>
+        <ol class="ap-steps">${STATUS.slice(0, n).map(([t, m], i) => `<li class="${i === n - 1 ? 'now' : ''}"><i>${AI.check}</i><span>${t}</span><small>${clock(m)}</small></li>`).join('')}</ol>
+        <div class="ap-box"><small>Your order</small>${o.items.map(([nm, q]) => `<b>${q} × ${esc(nm)}</b>`).join('')}</div>`;
+    }
+    return `<div class="ap-status"><span>${clock(time)}</span><i></i><span>5G ▮▮▮</span></div><div class="ap-bar"><b>Lantern Eats</b><small>invented demo app</small></div><div class="ap-body">${body}</div>`;
+  }
+
+  const SKIN = '#F2C29C', SKIN_D = '#E2A97F', CREASE = '#CF936B', SLEEVE = '#33414F';
+  const PALM = `<svg class="hp-palm" viewBox="0 0 320 640" aria-hidden="true"><path d="M84 640C70 596 36 540 36 470C38 410 70 368 112 360L246 358C284 362 302 398 300 452C298 522 266 592 254 640Z" fill="${SKIN_D}"/><path d="M70 610Q165 628 264 610L270 640H62Z" fill="${SLEEVE}"/></svg>`;
+  const GRIP = `<svg class="hp-grip" viewBox="0 0 320 640" aria-hidden="true">${[286, 330, 374, 418].map(y => `<rect x="259" y="${y}" width="40" height="36" rx="18" fill="${SKIN}"/><path d="M266 ${y + 18}h12" stroke="${CREASE}" stroke-width="2" stroke-linecap="round"/>`).join('')}
+    <path d="M38 500C30 460 36 418 54 392C64 378 84 380 82 400C78 428 74 456 78 500Z" fill="${SKIN}"/><path d="M60 392C62 383 78 382 80 392L79 406C73 410 64 409 60 404Z" fill="#F9DFCB"/></svg>`;
+  const FINGER = `<svg viewBox="0 0 140 300" width="100%" height="100%" aria-hidden="true"><path d="M30 170C26 140 44 124 62 130H104C126 132 138 156 136 184L132 300H44C34 256 28 210 30 170Z" fill="${SKIN_D}"/>
+    <path d="M50 16C50 2 82 2 82 16L86 150C76 158 58 158 48 150Z" fill="${SKIN}"/><path d="M54 18C54 8 78 8 78 18V38C72 43 60 43 54 38Z" fill="#F9DFCB"/>
+    <path d="M52 78Q66 83 84 78M51 112Q66 117 85 112M88 160C104 156 122 160 132 170M86 194C104 190 122 194 134 204M86 228C102 224 120 228 132 238" stroke="${CREASE}" stroke-width="2.6" fill="none" stroke-linecap="round"/>
+    <path d="M28 186C48 172 74 176 90 190C80 202 52 206 30 212Z" fill="${SKIN}"/><path d="M40 268H136L134 300H44Z" fill="${SLEEVE}"/></svg>`;
+
+  function backend(h) {
+    const p = h.parts, scale = 40, pc = v => (v / scale * 100).toFixed(2);
+    let x = 0;
+    const segs = SEG_NAMES.map((n, i) => { const v = [p.travel, p.signals, p.wait, p.access, p.handover][i], left = x; x += v;
+      return `<div class="seg p${i}" data-w="${pc(v)}" style="left:${pc(left)}%;width:0"><span>${n} ${v}</span></div>`; }).join('');
+    let ticks = '';
+    for (let m = 0; m <= scale; m += 10) ticks += `<span style="left:${pc(m)}%">${m} min</span>`;
+    const real = h.stage >= 2 ? `<div class="be-real"><h4>What the trip really takes</h4>
+        <div class="bars"><div class="lbl"><b>AI time</b></div><div class="track"><div class="seg ai" data-w="${pc(h.ai)}" style="left:0;width:0"><span>${h.ai} min</span></div>
+          <div class="gap-mark" style="left:${pc(h.ai)}%;width:${pc(p.total - h.ai)}%">${p.total - h.ai} min short</div></div>
+        <div class="lbl"><b>Real trip</b></div><div class="track">${segs}</div><div></div><div class="axis">${ticks}</div></div>
+        <p class="be-sum">${p.travel} + ${p.signals} + ${p.wait} + ${p.access} + ${p.handover} = <b>${p.total} min</b></p>
+        <div class="be-q">Who makes up the missing ${p.total - h.ai} minutes?</div>
+        <small class="be-note">Example numbers for this demo, not measurements.</small></div>` : '';
+    return `<div class="be"><div class="be-head"><span class="be-chip">Platform backend</span><h3>AI dispatch</h3><small>simulated</small></div>
+      <div class="be-ticket" id="be-ticket"><b>${esc(h.order.id)}</b><span>${esc(h.order.restaurant)} → ${esc(h.order.drop)} · ${h.order.km} km</span><small>ordered ${clock(0)}</small></div>
+      <div class="be-ai"><small>AI suggests delivery by</small><b>${clock(h.ai)}</b><span>only ${h.ai} min</span></div>${real}</div>`;
+  }
+
+  function handPhone(h) {
+    const side = h.script === 'order' && h.stage >= 1;
+    const screen = h.script === 'order' ? apScreen('paid', h) : apScreen('status', h);
+    return `<div class="hp ${side ? 'with-side' : ''}" id="hp"><div class="hp-cam ${side ? '' : 'mid'}" id="hp-cam"><div class="hp-dev" id="hp-dev">${PALM}
+      <div class="hp-phone"><div class="hp-screen" id="hp-screen">${screen}</div></div>${GRIP}<div class="hp-finger" id="hp-finger">${FINGER}</div></div></div>
+      ${side ? `<div class="hp-side" id="hp-side">${backend(h)}</div>` : ''}${h.script === 'order' && h.stage === 0 ? guide() : ''}<div class="hp-tag">Invented app, shop and address</div></div>`;
+  }
+  const GUIDE = ['Open the app', 'Choose a shop', 'Add the food', 'Pay', 'Order placed'];
+  function guide() {
+    return `<ol class="hp-guide" id="hp-guide">${GUIDE.map((t, i) => `<li class="on"><b>${i + 1}</b>${t}</li>`).join('')}</ol>`;
+  }
+
   /* ---------- boards ---------- */
   function overview(o) {
     return `<div class="board"><div class="ov" id="ov">
-      <div class="ov-node ov-ai" id="ov-ai"><h4>Existing AI dispatch</h4><p>Chooses the rider and proposes a delivery time. RTPL does not change it.</p><span class="sim">Simulated in this prototype</span></div>
-      <div class="ov-rtpl" id="ov-rtpl"><header>${ICON.shield.replace('<svg', '<svg width="26" height="26" style="color:#FFC20E"')}<b>RTPL</b><span>Rider Time Protection Layer · rules P01–P07</span></header>
+      <div class="ov-node ov-ai" id="ov-ai"><h4>AI dispatch</h4><p>Picks a rider and suggests a time. We leave it as it is.</p><span class="sim">Simulated here</span></div>
+      <div class="ov-rtpl" id="ov-rtpl"><header>${ICON.shield.replace('<svg', '<svg width="26" height="26" style="color:#FFC20E"')}<b>RTPL</b><span>Rider Time Protection Layer</span></header>
         <div class="ov-stages">
-          <div class="ov-stage"><span class="sl">slides 6–7</span><span class="num">1</span><h5>Check before dispatch</h5><p>Hold stale data. Publish no time below a legal minimum. Accepted times never move earlier.</p><div class="rules"><span>P01</span><span>P02</span></div></div>
-          <div class="ov-stage"><span class="sl">slides 8–9</span><span class="num">2</span><h5>Explain after hand-over</h5><p>Credit each verified outside delay once. Protect unless reliable evidence shows the rider caused the rest.</p><div class="rules"><span>P03</span><span>P04</span><span>P05</span></div></div>
-          <div class="ov-stage"><span class="sl">slides 10–11</span><span class="num">3</span><h5>Correct and oversee</h5><p>An appeal pauses disputed effects until an authorised person decides. A minimal record stays inspectable.</p><div class="rules"><span>P06</span><span>P07</span></div></div>
+          <div class="ov-stage"><span class="sl">slides 6–7</span><span class="num">1</span><h5>Before the rider gets a time</h5><p>Is the time actually possible? A promised time never moves earlier.</p><div class="rules"><span>P01</span><span>P02</span></div></div>
+          <div class="ov-stage"><span class="sl">slides 8–9</span><span class="num">2</span><h5>After delivery</h5><p>Was it really the rider’s fault? Each delay counts once. No proof, no penalty.</p><div class="rules"><span>P03</span><span>P04</span><span>P05</span></div></div>
+          <div class="ov-stage"><span class="sl">slides 10–11</span><span class="num">3</span><h5>If the rider disagrees</h5><p>Penalties pause until a person decides. A short record is kept.</p><div class="rules"><span>P06</span><span>P07</span></div></div>
         </div></div>
-      <div class="ov-out"><div class="ov-node" id="ov-rider"><h4>Rider app</h4><p>Checked deadline, delay explanation, appeal button.</p></div><div class="ov-node cust" id="ov-cust"><h4>Customer app</h4><p>The same checked time. Nothing about evidence or appeals.</p></div></div>
-      <div class="ov-below"><div class="ov-node" id="ov-rev"><h4>Human reviewer</h4><p>Real correction authority. Must record a reason.</p></div><div class="ov-node aud" id="ov-aud"><h4>Auditor</h4><p>Version, rule, outcome, effects. No identity or GPS.</p></div></div>
-      <div class="ov-real"><span><b>Runs for real:</b> deadline arithmetic, delay accounting, protection decision, appeal and review states, minimised export.</span><span><b>Simulated:</b> the AI proposal, evidence reliability labels, reviewer authority.</span></div>
+      <div class="ov-out"><div class="ov-node" id="ov-rider"><h4>Rider app</h4><p>Gets a checked time. Can appeal.</p></div><div class="ov-node cust" id="ov-cust"><h4>Customer app</h4><p>Gets the same time. Nothing else.</p></div></div>
+      <div class="ov-below"><div class="ov-node" id="ov-rev"><h4>Human reviewer</h4><p>Can fix mistakes. Must say why.</p></div><div class="ov-node aud" id="ov-aud"><h4>Auditor</h4><p>Sees the record, not the person.</p></div></div>
+      <div class="ov-real"><span><b>Runs for real:</b> the rules and their results.</span><span><b>Simulated:</b> the AI, the evidence labels, reviewer authority.</span></div>
       </div></div>`;
   }
 
@@ -268,9 +366,9 @@
   }
 
   const EFFECT_INFO = {
-    'Service score': 'The platform’s performance score',
-    'Customer rating': 'How this order counts toward ratings',
-    'Bonus': 'Incentive pay tied to on-time delivery',
+    'Service score': 'Performance score',
+    'Customer rating': 'Rating from this order',
+    'Bonus': 'On-time bonus pay',
     'Future allocation': 'Priority for future orders'
   };
 
@@ -336,5 +434,5 @@
     return engineDeadline(out.engine) + (out.credit ? engineCredit(out.credit, 'Delay check · your inputs') : '<div class="msg info">Dispatch is held, so there is no delivery to check.</div>');
   }
 
-  root.RTPLRender = {esc, riderPhone, customerPhone, mapHtml, engine, overview, compare, review, audit, sandboxForm, sandboxOut, jsonHtml};
+  root.RTPLRender = {esc, handPhone, apScreen, riderPhone, customerPhone, mapHtml, engine, overview, compare, review, audit, sandboxForm, sandboxOut, jsonHtml};
 })(typeof globalThis !== 'undefined' ? globalThis : this);

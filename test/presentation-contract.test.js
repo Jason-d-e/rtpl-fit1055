@@ -23,16 +23,17 @@ test('The page loads the single rules core before every interface script', () =>
   }
 });
 
-test('Main scenes follow slides 5 to 11 with the scripted presenters', () => {
+test('Main scenes follow slide 2 and slides 5 to 11 with the scripted presenters', () => {
   const main = S.SCENES.filter(s => s.group === 'main').map(s => [s.id, s.slide, s.presenter, s.title]);
   assert.deepEqual(main, [
-    ['slide-5', 5, 'Yanyu Zhu', 'A layer around existing AI dispatch'],
-    ['slide-6', 6, 'Yanyu Zhu', 'The first check changes the instruction'],
-    ['slide-7', 7, 'Yanyu Zhu', 'Accepted time survives later changes'],
-    ['slide-8', 8, 'Yixuan Hu', 'External delay earns credit once'],
-    ['slide-9', 9, 'Shengbao Lu', 'Missing evidence triggers protection'],
-    ['slide-10', 10, 'Shengbao Lu', 'An appeal pauses the disputed effects'],
-    ['slide-11', 11, 'Shengbao Lu', 'Oversight needs records and access']
+    ['slide-2', 2, 'Liyuan Liang', 'One lunch order, one tight deadline'],
+    ['slide-5', 5, 'Yanyu Zhu', 'Where RTPL sits'],
+    ['slide-6', 6, 'Yanyu Zhu', 'Check 1: can a rider make it in time?'],
+    ['slide-7', 7, 'Yanyu Zhu', 'The road changes, the promise holds'],
+    ['slide-8', 8, 'Yixuan Hu', 'A delay can only be excused once'],
+    ['slide-9', 9, 'Shengbao Lu', 'Late is not the same as at fault'],
+    ['slide-10', 10, 'Shengbao Lu', 'Appeal: pause first, then a person decides'],
+    ['slide-11', 11, 'Shengbao Lu', 'A record for oversight, and nothing more']
   ]);
 });
 
@@ -51,7 +52,10 @@ test('The fixed presentation inputs remain unchanged', () => {
 test('The demo outcomes remain aligned with the presentation script', () => {
   const results = S.SCENES.flatMap(s => s.beats.map(b => b.result).filter(Boolean));
   for (const text of [
-    '24 min becomes a 34 min budget: 12:34 for everyone',
+    'The AI suggests 12:24',
+    '34 min needed, 24 given: 10 min short',
+    'The AI’s 12:24 goes in. A checked 12:34 comes out.',
+    '24 min was 10 short. Everyone gets 12:34.',
     'A101 moves to 12:44, B102 to 12:50',
     'Neither time moves earlier',
     '5 min late, 0 new credit, 5 still unexplained. Rider protected.',
