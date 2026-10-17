@@ -2,7 +2,7 @@
 (function () {
   'use strict';
   const S = window.RTPLScenes, R = window.RTPLRender, G = window.RTPLGeo, C = window.RTPLCore;
-  const A = window.RTPLSound || {on: false, unlock() {}, toggle() { return false; }, onChange() {}, mood() {}, fx() {}};
+  const A = window.RTPLSound || {on: false, unlock() {}, toggle() { return false; }, onChange() {}, theme() {}, fx() {}};
   const $ = id => document.getElementById(id);
   const SCENES = S.SCENES;
   const MAIN = SCENES.filter(s => s.group === 'main');
@@ -319,20 +319,33 @@
 
   /* ---------- sound and the presenter name card ---------- */
   function cue(b) {
-    A.mood(b.mood || 'calm');
+    A.theme(b.theme);
     if (b.sfx) A.fx(b.sfx, b.sfxAt);
   }
   function soundButton(on) { const el = $('sound-btn'); el.setAttribute('aria-pressed', on); el.classList.toggle('off', !on); el.title = on ? 'Sound on (M to mute)' : 'Sound off (M to turn on)'; }
   A.onChange(soundButton);
   ['keydown', 'pointerdown'].forEach(t => document.addEventListener(t, () => A.unlock(), {once: false, passive: true}));
 
-  function nameCard(s) {
+  // A big name card slides in when a new presenter takes over, then shrinks into the
+  // footer badge, which stays until the next presenter.
+  let cardTimer = 0;
+  function nameCard(s, animate) {
+    clearTimeout(cardTimer);
     const old = document.querySelector('.namecard'); if (old) old.remove();
-    if (!s.presenter || !S.SECTIONS[s.presenter]) return;
+    const chip = $('speaker'), known = s.presenter && S.SECTIONS[s.presenter];
+    chip.innerHTML = known ? `<b>${R.esc(s.presenter)}</b><span>${R.esc(S.SECTIONS[s.presenter])}</span>` : '<b>Q&amp;A</b><span>Section owner answers first</span>';
+    chip.classList.remove('land');
+    if (!known || !animate || reduced()) { chip.classList.add('show'); return; }
+    chip.classList.remove('show');
     const el = document.createElement('div'); el.className = 'namecard';
-    el.innerHTML = `<b>${R.esc(s.presenter)}</b><span>${R.esc(S.SECTIONS[s.presenter])}</span>`;
+    el.innerHTML = chip.innerHTML;
     document.querySelector('.stage').appendChild(el);
-    setTimeout(() => el.remove(), 3600);
+    cardTimer = setTimeout(() => {
+      const a = el.getBoundingClientRect(), b = chip.getBoundingClientRect();
+      const dock = el.animate([{transform: 'none', opacity: 1}, {transform: `translate(${b.left - a.left}px, ${b.top - a.top}px) scale(${b.width / a.width}, ${b.height / a.height})`, opacity: .4}],
+        {duration: 650, easing: 'cubic-bezier(.5, 0, .3, 1)', fill: 'forwards'});
+      dock.onfinish = () => { el.remove(); chip.classList.add('show', 'land'); };
+    }, 2800);
   }
 
   /* ---------- render ---------- */
@@ -341,11 +354,9 @@
     renderChrome();
     renderPhones(newScene);
     renderCenter(prev, animate);
-    if (newScene && animate) {
-      const h = $('title'); h.classList.remove('in'); void h.offsetWidth; h.classList.add('in');
-      if (!prev || prev.scene.presenter !== scene().presenter) nameCard(scene());
-    }
-    if (animate) cue(beat()); else A.mood(beat().mood || 'calm');
+    if (newScene && animate) { const h = $('title'); h.classList.remove('in'); void h.offsetWidth; h.classList.add('in'); }
+    if (!prev || prev.scene.presenter !== scene().presenter) nameCard(scene(), animate);
+    if (animate) cue(beat()); else A.theme(beat().theme);
     scheduleLoop();
   }
 

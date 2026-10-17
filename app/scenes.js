@@ -385,22 +385,22 @@
       beats: [{time: null, center: 'sandbox', caption: 'Change any number. The same rules respond. Nothing here matches the slides.', note: 'Use during questions only.'}]}
   ];
 
-  /* ---------- sound: the music mood and one effect for each step ([mood, effect, delay ms]) ---------- */
+  /* ---------- sound: two pieces of music, and one effect for each step ([effect, delay ms]) ---------- */
+  // Liyuan's opening has its own theme; every other presenter shares the main theme.
+  const THEME_OF = presenter => presenter === 'Liyuan Liang' ? 'opening' : 'main';
   const AUDIO = {
-    'slide-2': [['bright'], ['calm'], ['tense', 'alert', 1300]],
-    'slide-5': [['bright'], ['calm']],
-    'slide-6': [['tense', 'alert', 1200], ['resolve', 'ping', 600], ['calm', 'chime']],
-    'slide-7': [['calm'], ['tense', 'alert', 300], ['resolve', 'ping', 400]],
-    'slide-8': [['calm', 'ping', 300], ['tense', 'alert', 2500], ['resolve', 'success', 300]],
-    'slide-9': [['tense'], ['resolve', 'success', 200], ['calm', 'flip', 200]],
-    'slide-10': [['calm'], ['tense', 'flip', 100], ['resolve', 'success', 200]],
-    'slide-11': [['calm', 'type'], ['calm', 'ping']],
-    'qa-07': [['calm'], ['tense', 'alert', 200]],
-    'qa-06': [['calm'], ['resolve', 'success', 300]],
-    'qa-05': [['calm'], ['resolve', 'success', 300]],
-    'sandbox': [['calm']]
+    'slide-2': [[], [], ['alert', 1300]],
+    'slide-6': [['alert', 1200], ['ping', 600], ['chime']],
+    'slide-7': [[], ['alert', 300], ['ping', 400]],
+    'slide-8': [['ping', 300], ['alert', 2500], ['success', 300]],
+    'slide-9': [[], ['success', 200], ['flip', 200]],
+    'slide-10': [[], ['flip', 100], ['success', 200]],
+    'slide-11': [['type'], ['ping']],
+    'qa-07': [[], ['alert', 200]],
+    'qa-06': [[], ['success', 300]],
+    'qa-05': [[], ['success', 300]]
   };
-  SCENES.forEach(s => s.beats.forEach((b, k) => { const a = (AUDIO[s.id] || [])[k] || ['calm']; b.mood = a[0]; b.sfx = a[1] || null; b.sfxAt = a[2] || 0; }));
+  SCENES.forEach(s => s.beats.forEach((b, k) => { const a = (AUDIO[s.id] || [])[k] || []; b.theme = THEME_OF(s.presenter); b.sfx = a[0] || null; b.sfxAt = a[1] || 0; }));
 
   // Shown as a lower-third name card when a new presenter takes over.
   const SECTIONS = {'Liyuan Liang': 'Slide 2 · The problem', 'Yanyu Zhu': 'Slides 5–7 · Checking the time', 'Yixuan Hu': 'Slide 8 · Counting delays', 'Shengbao Lu': 'Slides 9–11 · Evidence, appeal, oversight'};

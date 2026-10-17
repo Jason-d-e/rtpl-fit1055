@@ -711,10 +711,17 @@ button { cursor: pointer; }
 @keyframes typeIn { from { opacity: 0; } to { opacity: 1; } }
 
 /* presenter name card (lower third) */
-.namecard { position: absolute; left: calc(var(--gap) * 2); bottom: calc(var(--gap) * 1.5); z-index: 25; display: flex; flex-direction: column; background: var(--asphalt); color: #fff; border-left: .45rem solid var(--signal); border-radius: .4rem 1rem 1rem .4rem; padding: .7rem 1.3rem .75rem 1rem; box-shadow: 0 16px 36px rgba(0, 0, 0, .3); animation: card 3.6s cubic-bezier(.3, .9, .3, 1) forwards; pointer-events: none; }
+.namecard { position: absolute; left: calc(var(--gap) * 2); bottom: calc(var(--gap) * 1.5); z-index: 25; display: flex; flex-direction: column; background: var(--asphalt); color: #fff; border-left: .45rem solid var(--signal); border-radius: .4rem 1rem 1rem .4rem; padding: .7rem 1.3rem .75rem 1rem; box-shadow: 0 16px 36px rgba(0, 0, 0, .3); animation: card .6s cubic-bezier(.3, .9, .3, 1) both; pointer-events: none; transform-origin: 0 0; }
 .namecard b { font-size: 1.6rem; font-weight: 800; font-stretch: 82%; line-height: 1.05; }
 .namecard span { font-size: .9rem; color: var(--signal); font-weight: 600; }
-@keyframes card { 0% { transform: translateX(-120%); opacity: 0; } 12%, 82% { transform: none; opacity: 1; } 100% { transform: translateX(-120%); opacity: 0; } }
+@keyframes card { from { transform: translateX(-120%); opacity: 0; } to { transform: none; opacity: 1; } }
+/* the docked badge in the footer: who is speaking now */
+.speaker { flex: none; display: inline-flex; align-items: baseline; gap: .5rem; background: var(--asphalt); color: #fff; border-left: .3rem solid var(--signal); border-radius: .25rem .6rem .6rem .25rem; padding: .18rem .7rem .2rem .55rem; opacity: 0; transition: opacity .3s; }
+.speaker.show { opacity: 1; }
+.speaker.land { animation: pop .4s cubic-bezier(.2, .9, .3, 1.4); }
+.speaker b { font-size: .86rem; font-weight: 800; }
+.speaker span { font-size: .72rem; color: var(--signal); font-weight: 600; }
+.speaker:empty { display: none; }
 .stage { position: relative; }
 .head h1.in { animation: rise .5s ease both; }
 .ctl .opt.off { color: #8995A1; border-style: dashed; text-decoration: line-through; }

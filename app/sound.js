@@ -1,26 +1,34 @@
 /* Background music and sound effects, synthesised live with the Web Audio API.
  * No audio files and no network: every note is generated in the browser.
- * The music has four moods that follow the story; effects mark taps, alerts and results. */
+ * Two pieces: an opening theme for Liyuan's introduction and a calmer main theme for
+ * the rest of the team. Effects mark taps, alerts and results. */
 (function (root) {
   'use strict';
   let on = true;
   let ctx = null, master, music, sfx, echo, noiseBuf = null, ticker = 0;
-  let nextTime = 0, step = 0, bar = 0, mood = 'calm', wanted = 'calm';
+  let nextTime = 0, step = 0, bar = 0, theme = 'main', wanted = 'main';
   const listeners = [];
-  const BPM = 88, SIX = 60 / BPM / 4;              // one sixteenth note, in seconds
   const mtof = m => 440 * Math.pow(2, (m - 69) / 12);
 
-  // Four chords per mood. Each chord: [bass, ...chord tones] as MIDI notes.
-  const MOODS = {
-    bright:  {chords: [[41, 57, 60, 64, 65], [36, 55, 60, 62, 64], [38, 57, 60, 62, 65], [34, 53, 57, 62, 65]],
-      arp: [0, 2, 1, 3, 2, 4, 3, 1], arpEvery: 2, bass: [0, 6, 8, 14], kick: [0, 8], hat: [2, 6, 10, 14], cut: 2400, pad: .030},
-    calm:    {chords: [[36, 52, 55, 59, 62], [33, 52, 55, 57, 60], [29, 53, 57, 60, 64], [31, 50, 55, 59, 62]],
-      arp: [0, 2, 3, 1], arpEvery: 4, bass: [0, 10], kick: [0], hat: [4, 12], cut: 1500, pad: .034},
-    tense:   {chords: [[33, 52, 57, 60, 64], [29, 53, 57, 60, 65], [26, 50, 53, 57, 62], [28, 52, 56, 59, 64]],
-      arp: [0, 1, 2, 1], arpEvery: 2, bass: [0, 2, 4, 6, 8, 10, 12, 14], kick: [0, 4, 8, 12], hat: [2, 6, 10, 14], cut: 1000, pad: .036},
-    resolve: {chords: [[41, 57, 60, 64, 69], [43, 55, 59, 62, 67], [40, 55, 59, 64, 67], [45, 57, 60, 64, 69]],
-      arp: [0, 2, 4, 3, 1, 2, 3, 4], arpEvery: 2, bass: [0, 8], kick: [0, 8], hat: [4, 12], cut: 2800, pad: .030}
+  // Four chords per theme. Each chord: [bass, ...chord tones] as MIDI notes.
+  // Melody notes: [sixteenth step, MIDI note, length in sixteenths] for each bar.
+  const THEMES = {
+    // Opening: A minor, driving and a little cinematic, with a lead melody.
+    opening: {bpm: 100, cut: 2600, pad: .024,
+      chords: [[45, 57, 60, 64, 67], [41, 57, 60, 65, 69], [48, 55, 60, 64, 67], [43, 55, 59, 62, 67]],
+      arp: [0, 1, 2, 3, 2, 1, 3, 2], arpEvery: 2, bass: [0, 3, 6, 8, 11, 14], kick: [0, 4, 8, 12], snare: [4, 12], hat: [2, 6, 10, 14],
+      melody: [
+        [[0, 76, 3], [3, 74, 1], [4, 72, 2], [6, 71, 2], [8, 72, 4], [12, 69, 4]],
+        [[0, 72, 3], [3, 74, 1], [4, 76, 2], [6, 77, 2], [8, 76, 6], [14, 74, 2]],
+        [[0, 79, 3], [3, 77, 1], [4, 76, 2], [6, 74, 2], [8, 72, 4], [12, 76, 4]],
+        [[0, 74, 3], [3, 72, 1], [4, 71, 2], [6, 72, 2], [8, 74, 8]]
+      ]},
+    // Main: C major, slow and soft, sits under the speakers' voices.
+    main: {bpm: 84, cut: 1500, pad: .032,
+      chords: [[36, 52, 55, 59, 62], [33, 52, 55, 57, 60], [29, 53, 57, 60, 64], [31, 50, 55, 59, 62]],
+      arp: [0, 2, 3, 1], arpEvery: 4, bass: [0, 10], kick: [0], snare: [], hat: [4, 12], melody: null}
   };
+  const six = () => 60 / THEMES[theme].bpm / 4;     // one sixteenth note, in seconds
 
   /* ---------- instruments ---------- */
   function env(g, t, attack, peak, decay) {
@@ -43,6 +51,16 @@
   }
   function bass(f, t, dur) { const g = ctx.createGain(); env(g, t, 0.01, 0.20, dur); osc('triangle', f, t, t + dur + 0.1, g); g.connect(music); }
   function pluck(f, t) { const g = ctx.createGain(); env(g, t, 0.004, 0.06, 0.34); osc('triangle', f, t, t + 0.45, g); g.connect(music); g.connect(echo); }
+  function lead(f, t, dur) {
+    const g = ctx.createGain(), lp = ctx.createBiquadFilter();
+    lp.type = 'lowpass'; lp.frequency.value = 2400;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.045, t + 0.02);
+    g.gain.setValueAtTime(0.045, t + Math.max(0.03, dur - 0.08));
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur + 0.12);
+    osc('square', f, t, t + dur + 0.2, lp); osc('triangle', f * 2, t, t + dur + 0.2, lp);
+    lp.connect(g); g.connect(music); g.connect(echo);
+  }
   function kick(t) {
     const g = ctx.createGain(), o = osc('sine', 120, t, t + 0.3, g);
     o.frequency.setValueAtTime(120, t); o.frequency.exponentialRampToValueAtTime(42, t + 0.16);
@@ -61,19 +79,29 @@
 
   /* ---------- the sequencer: schedules a little ahead of the clock ---------- */
   function playStep(s, t) {
-    const M = MOODS[mood], ch = M.chords[bar], tones = ch.slice(1);
-    if (s === 0) tones.forEach(n => pad(mtof(n), t, SIX * 16, M.cut, M.pad));
-    if (M.bass.includes(s)) bass(mtof(ch[0]), t, mood === 'tense' ? SIX * 1.6 : SIX * 3.5);
+    const M = THEMES[theme], ch = M.chords[bar], tones = ch.slice(1), u = six();
+    if (s === 0) tones.forEach(n => pad(mtof(n), t, u * 16, M.cut, M.pad));
+    if (M.bass.includes(s)) bass(mtof(ch[0]), t, u * (M.melody ? 2.5 : 3.5));
     if (s % M.arpEvery === 0) pluck(mtof(tones[M.arp[(s / M.arpEvery) % M.arp.length] % tones.length] + 12), t);
+    if (M.melody) M.melody[bar].forEach(([at, n, len]) => { if (at === s) lead(mtof(n), t, u * len); });
     if (M.kick.includes(s)) kick(t);
+    if (M.snare.includes(s)) noise(t, 0.12, 1400, 0.06);
     if (M.hat.includes(s)) noise(t, 0.045, 7000, 0.035);
   }
   function tick() {
+    if (wanted !== theme) {
+      // Cross over to the other piece: dip the music, restart at the top of its first bar.
+      const now = ctx.currentTime;
+      music.gain.cancelScheduledValues(now);
+      music.gain.setTargetAtTime(0, now, 0.08);
+      music.gain.setTargetAtTime(0.55, now + 0.35, 0.4);
+      theme = wanted; step = 0; bar = 0; nextTime = now + 0.35;
+    }
     while (nextTime < ctx.currentTime + 0.15) {
       playStep(step, nextTime);
-      nextTime += SIX;
+      nextTime += six();
       step = (step + 1) % 16;
-      if (step === 0) { bar = (bar + 1) % 4; if (wanted !== mood) { mood = wanted; bar = 0; } }
+      if (step === 0) bar = (bar + 1) % 4;
     }
   }
 
@@ -105,10 +133,10 @@
     master = ctx.createGain(); master.gain.value = 0;
     music = ctx.createGain(); music.gain.value = 0.55;
     sfx = ctx.createGain(); sfx.gain.value = 0.9;
-    echo = ctx.createDelay(); echo.delayTime.value = SIX * 3;
+    echo = ctx.createDelay(); echo.delayTime.value = 0.45;
     const fb = ctx.createGain(); fb.gain.value = 0.28; echo.connect(fb); fb.connect(echo); echo.connect(music);
     music.connect(master); sfx.connect(master); master.connect(comp); comp.connect(ctx.destination);
-    nextTime = ctx.currentTime + 0.1; mood = wanted;
+    nextTime = ctx.currentTime + 0.1; theme = wanted;
     ticker = setInterval(tick, 25);
     return true;
   }
@@ -129,7 +157,7 @@
       return on;
     },
     onChange(fn) { listeners.push(fn); },
-    mood(m) { if (MOODS[m]) wanted = m; },
+    theme(t) { if (THEMES[t]) wanted = t; },
     fx(name, delayMs) {
       if (!on || !ctx || ctx.state !== 'running' || !FX[name]) return;
       FX[name](ctx.currentTime + 0.01 + (delayMs || 0) / 1000);
