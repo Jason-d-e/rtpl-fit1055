@@ -1,5 +1,8 @@
 'use strict';
 
+// The live site is a presentation contract: each main scene matches one slide,
+// keeps its presenter and shows the same numbers as the slides and speaker notes.
+
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
@@ -7,58 +10,69 @@ const path = require('node:path');
 
 const root = path.resolve(__dirname, '..');
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
+const S = require('../app/scenes.js');
 
-function occurrences(source, value) {
-  return source.split(value).length - 1;
-}
-
-test('The browser loads one external core before the interface layer', () => {
-  const coreTag = '<script src="./rtpl-core.js"></script>';
-  const interfaceStart = 'const C = window.RTPLCore;';
-  assert.equal(occurrences(html, coreTag), 1);
-  assert.equal(occurrences(html, 'function budget(i)'), 0);
-  assert.ok(html.indexOf(coreTag) < html.indexOf(interfaceStart));
-});
-
-test('Cases 01 to 07 retain their presentation identifiers and titles', () => {
-  const cases = [
-    ['01', 'Tight AI deadline'],
-    ['02', 'Delay already compensated'],
-    ['03', 'Late, cause not established'],
-    ['04', 'Late, rider cause supported'],
-    ['05', 'Safe legal detour'],
-    ['06', 'Overlapping outside delays'],
-    ['07', 'Out-of-date route data']
-  ];
-  for (const [number, title] of cases) {
-    assert.ok(html.includes(`num:'${number}', title:'${title}'`), `missing case ${number}`);
+test('The page loads the single rules core before every interface script', () => {
+  const order = ['./rtpl-core.js', './app/geo.js', './app/scenes.js', './app/render.js', './app/main.js'];
+  const at = order.map(src => html.indexOf(`<script src="${src}"></script>`));
+  assert.ok(at.every(i => i > 0), 'all scripts present');
+  assert.deepEqual([...at].sort((a, b) => a - b), at, 'scripts load in dependency order');
+  for (const f of ['app/geo.js', 'app/scenes.js', 'app/render.js', 'app/main.js']) {
+    const src = fs.readFileSync(path.join(root, f), 'utf8');
+    assert.equal(src.includes('function budget('), false, `${f} must not re-implement the rules`);
   }
 });
 
-test('The fixed presentation inputs remain unchanged', () => {
-  assert.ok(html.includes(
-    'const BASE = {distance:4, legalSpeed:20, conditionSpeed:20, signals:4, wait:10, access:6, handover:2, fresh:true};'
-  ));
-  assert.ok(html.includes('const B102_ACCEPTED = 42;'));
-  assert.ok(html.includes('const ROUTE_NOW = 20;'));
+test('Main scenes follow slides 5 to 11 with the scripted presenters', () => {
+  const main = S.SCENES.filter(s => s.group === 'main').map(s => [s.id, s.slide, s.presenter, s.title]);
+  assert.deepEqual(main, [
+    ['slide-5', 5, 'Yanyu Zhu', 'A layer around existing AI dispatch'],
+    ['slide-6', 6, 'Yanyu Zhu', 'The first check changes the instruction'],
+    ['slide-7', 7, 'Yanyu Zhu', 'Accepted time survives later changes'],
+    ['slide-8', 8, 'Yixuan Hu', 'External delay earns credit once'],
+    ['slide-9', 9, 'Shengbao Lu', 'Missing evidence triggers protection'],
+    ['slide-10', 10, 'Shengbao Lu', 'An appeal pauses the disputed effects'],
+    ['slide-11', 11, 'Shengbao Lu', 'Oversight needs records and access']
+  ]);
 });
 
-test('The main demo outcomes remain aligned with the presentation script', () => {
-  const expected = [
+test('Question-time extras keep cases 05, 06, 07 and the Sandbox', () => {
+  const extra = S.SCENES.filter(s => s.group === 'extra').map(s => s.id);
+  assert.deepEqual(extra, ['qa-07', 'qa-06', 'qa-05', 'sandbox']);
+});
+
+test('The fixed presentation inputs remain unchanged', () => {
+  assert.deepEqual({...S.BASE}, {distance: 4, legalSpeed: 20, conditionSpeed: 20, signals: 4, wait: 10, access: 6, handover: 2, fresh: true});
+  assert.equal(S.AI_PROPOSED, 24);
+  assert.equal(S.B102_ACCEPTED, 42);
+  assert.equal(S.ROUTE_NOW, 20);
+});
+
+test('The demo outcomes remain aligned with the presentation script', () => {
+  const results = S.SCENES.flatMap(s => s.beats.map(b => b.result).filter(Boolean));
+  for (const text of [
     '24 min becomes a 34 min budget: 12:34 for everyone',
     'A101 moves to 12:44, B102 to 12:50',
+    'Neither time moves earlier',
     '5 min late, 0 new credit, 5 still unexplained. Rider protected.',
     '10 min late, cause not established. Rider protected.',
     'Assessment can proceed. Nothing is applied yet.',
     'All four effects SUSPENDED.',
     'All four effects PROTECTED. Appeal REVERSE.',
+    'A minimised record: no identity, GPS, raw evidence or free-text reason.',
     '10 unique minutes excused, not 13. Nothing left unexplained.',
+    'Rider protected: a verified safe, legal detour.',
     'Dispatch held for review. No unchecked deadline published.'
-  ];
-  for (const text of expected) assert.ok(html.includes(text), `missing outcome: ${text}`);
+  ]) assert.ok(results.includes(text), `missing outcome: ${text}`);
 });
 
 test('The teaching and synthetic-data boundaries stay visible', () => {
   assert.ok(html.includes('Demonstration only: no real deliveries, model inference, platform connection or measured rider outcomes.'));
   assert.ok(html.includes('Reviewer authority and evidence reliability are simulated.'));
+  assert.equal(S.BOUNDARY, 'Demonstration only: no real deliveries, model inference, platform connection or measured rider outcomes.');
+});
+
+test('Old Case Lab links still resolve to a scene', () => {
+  const main = fs.readFileSync(path.join(root, 'app/main.js'), 'utf8');
+  for (const k of ['01', '02', '03', '04', '05', '06', '07']) assert.ok(main.includes(`'${k}':`), `alias #${k}`);
 });
