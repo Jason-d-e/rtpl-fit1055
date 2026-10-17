@@ -186,7 +186,11 @@
 
   /* ---------- the hand-held customer phone (slides 2 and 5) ---------- */
   const PARTS01 = C.budgetParts(BASE);
-  const hand = (script, stage) => ({script, stage, ai: AI_PROPOSED, parts: PARTS01, deadline: CHECK01.deadline, order: ORDER});
+  // What the AI time would demand: whatever is left after the stops must cover the whole 4 km.
+  const STOPS = PARTS01.signals + PARTS01.wait + PARTS01.access + PARTS01.handover;
+  const RIDE_LEFT = AI_PROPOSED - STOPS;
+  const SPEED = Object.freeze({rideLeft: RIDE_LEFT, need: Math.round(BASE.distance / (RIDE_LEFT / 60)), legal: PARTS01.speed, km: BASE.distance});
+  const hand = (script, stage) => ({script, stage, ai: AI_PROPOSED, parts: PARTS01, deadline: CHECK01.deadline, order: ORDER, speed: SPEED});
 
   /* ---------- scenes ---------- */
   const SCENES = [
@@ -200,7 +204,7 @@
           note: 'Point at 12:24. Press → to show what the trip really takes.'},
         {time: 0, center: 'handphone', solo: true, hand: hand('order', 2), result: '34 min needed, 24 given: 10 min short',
           caption: 'But the trip really takes 34 minutes: 12 to ride legally, plus 22 for lights, waiting for the food, getting into the building and handing over. Who makes up the missing 10?',
-          note: 'Ask the question, pause two seconds. These are made-up example numbers, not measurements. Back to the slides for 3 and 4.'}
+          note: 'Point at the speedometer: 2 minutes left to ride 4 km means 120 km/h. Ask the question, pause two seconds. Made-up example numbers. Back to the slides for 3 and 4.'}
       ]},
 
     {id: 'slide-5', slide: 5, presenter: 'Yanyu Zhu', title: 'Where RTPL sits', short: 'Overview', group: 'main',
@@ -216,13 +220,15 @@
     {id: 'slide-6', slide: 6, presenter: 'Yanyu Zhu', title: 'Check 1: can a rider make it in time?', short: 'First check', group: 'main', caseNum: '01',
       beats: [
         {time: 0, center: 'map',
-          map: {rider: at('hub'), pins: pins(['rest', 'custA']), routes: [{path: 'mainA', style: 'planned'}], tags: [{at: [640, 250], text: '4 km legal route'}]},
+          map: {rider: at('hub'), pins: pins(['rest', 'custA']), routes: [{path: 'mainA', style: 'planned'}], tags: [{at: [640, 250], text: '4 km legal route'}],
+            speedo: {kmh: SPEED.need, limit: SPEED.legal, label: 'Needed to reach 12:24'}},
           engine: deadlineEngine(BASE, AI_PROPOSED, null),
           caption: 'Back to 12:00. The AI suggests 12:24. Before anyone sees it, RTPL asks: can a rider really make it without speeding?',
-          note: 'Point at the red AI bar: 24 min. Both phones show no time yet. Press → to run the check.',
+          note: 'Point at the speedometer: 12:24 would need 120 km/h. Both phones show no time yet. Press → to run the check.',
           rider: rider.idle(), customer: customer.confirming()},
         {time: 0, center: 'map', result: '24 min was 10 short. Everyone gets 12:34.',
-          map: {rider: at('hub'), pins: pins(['rest', 'custA']), routes: [{path: 'mainA', style: 'active'}], tags: [{at: [640, 250], text: '4 km at 20 km/h'}]},
+          map: {rider: at('hub'), pins: pins(['rest', 'custA']), routes: [{path: 'mainA', style: 'active'}], tags: [{at: [640, 250], text: '4 km at 20 km/h'}],
+            speedo: {kmh: SPEED.legal, limit: SPEED.legal, label: 'Legal speed for 12:34'}},
           engine: deadlineEngine(BASE, AI_PROPOSED, CHECK01),
           caption: 'No. Riding 4 km at the legal 20 km/h takes 12 minutes, and the stops along the way add 22. That makes 34, so the rider and the customer both get 12:34.',
           note: 'Point at the 10 min short box, then both phones: 12:34.',
@@ -379,6 +385,26 @@
       beats: [{time: null, center: 'sandbox', caption: 'Change any number. The same rules respond. Nothing here matches the slides.', note: 'Use during questions only.'}]}
   ];
 
+  /* ---------- sound: the music mood and one effect for each step ([mood, effect, delay ms]) ---------- */
+  const AUDIO = {
+    'slide-2': [['bright'], ['calm'], ['tense', 'alert', 1300]],
+    'slide-5': [['bright'], ['calm']],
+    'slide-6': [['tense', 'alert', 1200], ['resolve', 'ping', 600], ['calm', 'chime']],
+    'slide-7': [['calm'], ['tense', 'alert', 300], ['resolve', 'ping', 400]],
+    'slide-8': [['calm', 'ping', 300], ['tense', 'alert', 2500], ['resolve', 'success', 300]],
+    'slide-9': [['tense'], ['resolve', 'success', 200], ['calm', 'flip', 200]],
+    'slide-10': [['calm'], ['tense', 'flip', 100], ['resolve', 'success', 200]],
+    'slide-11': [['calm', 'type'], ['calm', 'ping']],
+    'qa-07': [['calm'], ['tense', 'alert', 200]],
+    'qa-06': [['calm'], ['resolve', 'success', 300]],
+    'qa-05': [['calm'], ['resolve', 'success', 300]],
+    'sandbox': [['calm']]
+  };
+  SCENES.forEach(s => s.beats.forEach((b, k) => { const a = (AUDIO[s.id] || [])[k] || ['calm']; b.mood = a[0]; b.sfx = a[1] || null; b.sfxAt = a[2] || 0; }));
+
+  // Shown as a lower-third name card when a new presenter takes over.
+  const SECTIONS = {'Liyuan Liang': 'Slide 2 · The problem', 'Yanyu Zhu': 'Slides 5–7 · Checking the time', 'Yixuan Hu': 'Slide 8 · Counting delays', 'Shengbao Lu': 'Slides 9–11 · Evidence, appeal, oversight'};
+
   function bundleRows(stage) {
     const fasterNeed = id => ROUTE_NOW + C.budget(REMAINING(true)[id]);
     return CLOSURE.orders.map((o, i) => ({
@@ -418,6 +444,6 @@
 
   function byId(id) { return SCENES.find(s => s.id === id) || null; }
 
-  return {SCENES, byId, clock, ORDER, ITEMS, BASE, AI_PROPOSED, B102_ACCEPTED, ROUTE_NOW, REVIEW_REASON, BOUNDARY, SIMULATED, SANDBOX_DEFAULT, sandbox,
+  return {SCENES, byId, clock, ORDER, ITEMS, SPEED, SECTIONS, BASE, AI_PROPOSED, B102_ACCEPTED, ROUTE_NOW, REVIEW_REASON, BOUNDARY, SIMULATED, SANDBOX_DEFAULT, sandbox,
     results: {CHECK01, CLOSURE, FASTER, STALE, D, APPEAL04, REVIEW04, AUDIT04}, CASE, EFFECTS: C.EFFECTS, CONFIG: C.CONFIG, core: C};
 });

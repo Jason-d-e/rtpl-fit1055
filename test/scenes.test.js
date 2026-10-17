@@ -25,6 +25,22 @@ test('Slide 2: the order story uses the same 24 min proposal and the core 34 min
   assert.ok(R.apScreen('checkout', h).includes('$37.40'), '2 × 14.50 + 4.50 + 3.90 delivery');
 });
 
+test('Slide 2 and 6: 12:24 leaves 2 minutes to ride 4 km, which needs 120 km/h against a legal 20', () => {
+  assert.deepEqual({...S.SPEED}, {rideLeft: 2, need: 120, legal: 20, km: 4});
+  assert.equal(beat('slide-6', 0).map.speedo.kmh, 120);
+  assert.equal(beat('slide-6', 1).map.speedo.kmh, 20);
+  assert.ok(R.speedo(beat('slide-6', 0).map.speedo).includes('120 km/h'));
+});
+
+test('Every step has a music mood; effects use known names', () => {
+  const fx = ['tap', 'ping', 'chime', 'success', 'alert', 'flip', 'whoosh', 'type', null];
+  for (const s of S.SCENES) for (const b of s.beats) {
+    assert.ok(['bright', 'calm', 'tense', 'resolve'].includes(b.mood), s.id);
+    assert.ok(fx.includes(b.sfx), s.id + ' ' + b.sfx);
+  }
+  for (const p of Object.keys(S.SECTIONS)) assert.ok(S.SCENES.some(s => s.presenter === p), p);
+});
+
 test('Slide 5: the customer app shows the checked 12:34, never the AI time', () => {
   const h = beat('slide-5', 0).hand;
   const html = R.apScreen('status', h);

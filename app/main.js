@@ -2,12 +2,13 @@
 (function () {
   'use strict';
   const S = window.RTPLScenes, R = window.RTPLRender, G = window.RTPLGeo, C = window.RTPLCore;
+  const A = window.RTPLSound || {on: false, unlock() {}, toggle() { return false; }, onChange() {}, mood() {}, fx() {}};
   const $ = id => document.getElementById(id);
   const SCENES = S.SCENES;
   const MAIN = SCENES.filter(s => s.group === 'main');
   const reduced = () => window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  const st = {i: 0, b: 0, live: {}, sb: {...S.SANDBOX_DEFAULT}, prev: null, raf: 0, notes: false, timers: []};
+  const st = {i: 0, b: 0, live: {}, sb: {...S.SANDBOX_DEFAULT}, prev: null, raf: 0, notes: false, timers: [], looping: true, loop: 0};
 
   /* ---------- navigation ---------- */
   function scene() { return SCENES[st.i]; }
@@ -70,7 +71,7 @@
     const m = MAIN.indexOf(s);
     $('hint').textContent = st.b < s.beats.length - 1 ? `Step ${st.b + 1} of ${s.beats.length}` : m >= 0 && m < MAIN.length - 1 ? `Next: slide ${MAIN[m + 1].slide}` : s.group === 'main' ? 'Back to the slides' : '';
     $('next').disabled = st.b === s.beats.length - 1 && (m < 0 || m === MAIN.length - 1);
-    $('notes').innerHTML = `<b>${s.slide ? 'Slide ' + s.slide + ' · ' + R.esc(s.presenter) : 'Q&A extra'}</b>${R.esc(b.note || '')}<br><small>Keys: <kbd>→</kbd>/<kbd>Space</kbd> next · <kbd>←</kbd> back · <kbd>R</kbd> restart scene · <kbd>N</kbd> notes · <kbd>2</kbd>, <kbd>5</kbd>–<kbd>9</kbd>, <kbd>0</kbd>=10, <kbd>1</kbd>=11 jump</small>`;
+    $('notes').innerHTML = `<b>${s.slide ? 'Slide ' + s.slide + ' · ' + R.esc(s.presenter) : 'Q&A extra'}</b>${R.esc(b.note || '')}<br><small>Keys: <kbd>→</kbd>/<kbd>Space</kbd> next · <kbd>←</kbd> back · <kbd>R</kbd> restart scene · <kbd>N</kbd> notes · <kbd>M</kbd> sound · <kbd>L</kbd> loop · <kbd>2</kbd>, <kbd>5</kbd>–<kbd>9</kbd>, <kbd>0</kbd>=10, <kbd>1</kbd>=11 jump</small>`;
     $('notes').hidden = !st.notes;
     if (location.hash !== hashFor()) history.replaceState(null, '', hashFor());
   }
@@ -185,6 +186,7 @@
       p.style.transform = kf[animate ? 0 : 1].transform; if (!animate && fade) p.style.opacity = 0;
       if (animate) p.animate(kf, {duration: dur, delay, easing: 'cubic-bezier(.5,0,.3,1)', fill: 'both'});
     };
+    if (animate) { A.fx('whoosh', 150); A.fx('ping', 1400); }
     fly(mk(S.clock(S.AI_PROPOSED)), [ai.cx, ai.cy], [g.l + 40, ai.cy], 100, 1100, true);
     const out = S.clock(S.results.CHECK01.deadline);
     fly(mk(out, true), [g.r - 30, rd.cy], [(g.r + rd.l) / 2, rd.cy], 1300, 900, false);
@@ -215,7 +217,7 @@
     const tap = sel => {
       const t = scr.querySelector(sel); if (!t) return;
       const [x, y] = local(t);
-      finger.classList.add('press'); later(150, () => finger.classList.remove('press'));
+      finger.classList.add('press'); later(150, () => finger.classList.remove('press')); A.fx('tap');
       t.classList.add('tapped');
       const rip = document.createElement('span'); rip.className = 'hp-ripple'; rip.style.left = x + 'px'; rip.style.top = y + 'px';
       dev.appendChild(rip); later(650, () => rip.remove());
@@ -229,7 +231,7 @@
     if (!animate || reduced()) return;
 
     if (h.script === 'status') {
-      [1, 2, 3, 4].forEach((n, i) => later(i * 1300, () => show('status', n)));
+      [1, 2, 3, 4].forEach((n, i) => later(i * 1300, () => { show('status', n); A.fx(n === 4 ? 'success' : 'ping'); }));
       return;
     }
     if (h.stage === 0) {
@@ -244,18 +246,23 @@
         [5050, () => point('[data-tap="add-tea"]')], [5700, () => tap('[data-tap="add-tea"]')], [5800, () => show('menu', {soup: 2, tea: 1})],
         [6300, () => point('[data-tap="cart"]')], [6950, () => tap('[data-tap="cart"]')], [7150, () => show('checkout')],
         [7750, () => { guide(3); point('[data-tap="pay"]'); }], [8400, () => tap('[data-tap="pay"]')], [8550, () => show('paying')],
-        [8800, () => park()], [9600, () => { guide(4); show('paid'); }]
+        [8800, () => park()], [9600, () => { guide(4); show('paid'); A.fx('chime'); }]
       ];
       steps.forEach(([ms, fn]) => later(ms, fn));
       return;
     }
     const fromCentre = prev && prev.beat && prev.beat.hand && prev.beat.hand.stage === 0;
-    if (h.stage === 1 && fromCentre) {
-      // Slide the phone left, then send the order ticket into the AI dispatch panel.
-      hp.classList.remove('with-side'); cam.classList.add('mid'); hp.classList.add('anim');
-      void hp.offsetWidth;
-      hp.classList.add('with-side'); cam.classList.remove('mid');
-      later(1000, () => {
+    if (h.stage === 1) {
+      // Slide the phone left (first time only), then send the order ticket into the AI dispatch panel.
+      if (fromCentre) {
+        hp.classList.remove('with-side'); cam.classList.add('mid'); hp.classList.add('anim');
+        void hp.offsetWidth;
+        hp.classList.add('with-side'); cam.classList.remove('mid');
+      }
+      hp.classList.add('fly');
+      hp.style.setProperty('--ai-delay', fromCentre ? '2.1s' : '1.4s');
+      later(fromCentre ? 1000 : 300, () => {
+        A.fx('whoosh');
         const src = scr.querySelector('#ap-ticket'), dst = $('be-ticket');
         if (!src || !dst) return;
         const box = hp.getBoundingClientRect(), a = src.getBoundingClientRect(), b = dst.getBoundingClientRect();
@@ -263,7 +270,7 @@
         hp.appendChild(fly);
         const kf = [{left: a.left - box.left + 'px', top: a.top - box.top + 'px', width: a.width + 'px', opacity: 1},
                     {left: b.left - box.left + 'px', top: b.top - box.top + 'px', width: b.width + 'px', opacity: 1}];
-        fly.animate(kf, {duration: 900, easing: 'cubic-bezier(.5,0,.3,1)', fill: 'both'}).onfinish = () => { dst.classList.add('landed'); fly.remove(); };
+        fly.animate(kf, {duration: 900, easing: 'cubic-bezier(.5,0,.3,1)', fill: 'both'}).onfinish = () => { dst.classList.add('landed'); fly.remove(); A.fx('ping', 250); };
       });
     }
   }
@@ -277,11 +284,69 @@
     if (el) { el.innerHTML = R.sandboxOut(out, st.sbErr); bars(false); }
   }
 
+  /* ---------- looping: every step replays its animation after a pause to read it ---------- */
+  function cycleFor(b) {
+    if (b.center === 'sandbox') return 0;
+    if (b.center === 'handphone') return b.hand.script === 'status' ? 9000 : b.hand.stage === 0 ? 14000 : 8500;
+    return b.center === 'map' ? 7500 : 7000;
+  }
+  function scheduleLoop() {
+    clearTimeout(st.loop);
+    const ms = cycleFor(beat());
+    if (st.looping && ms && !reduced()) st.loop = setTimeout(replay, ms);
+  }
+  function restartCss(el) {
+    if (!el || !el.getAnimations) return;
+    el.getAnimations({subtree: true}).forEach(a => {
+      const t = a.effect && a.effect.getTiming && a.effect.getTiming();
+      if (t && t.iterations !== Infinity) { a.currentTime = 0; a.play(); }
+    });
+  }
+  function replay() {
+    const s = scene(), b = beat();
+    const prevBeat = st.b > 0 ? {scene: s, beat: s.beats[st.b - 1], b: st.b - 1} : null;
+    // The review desk keeps what the presenter typed, so only its CSS motion replays.
+    if (b.center === 'review') restartCss($('center'));
+    else renderCenter(b.center === 'handphone' && b.hand.stage === 1 ? null : prevBeat, true);
+    restartCss($('left')); restartCss($('right'));
+    cue(b);
+    scheduleLoop();
+  }
+  function setLooping(v) {
+    st.looping = v; $('loop-btn').setAttribute('aria-pressed', v); $('loop-btn').classList.toggle('off', !v);
+    scheduleLoop();
+  }
+
+  /* ---------- sound and the presenter name card ---------- */
+  function cue(b) {
+    A.mood(b.mood || 'calm');
+    if (b.sfx) A.fx(b.sfx, b.sfxAt);
+  }
+  function soundButton(on) { const el = $('sound-btn'); el.setAttribute('aria-pressed', on); el.classList.toggle('off', !on); el.title = on ? 'Sound on (M to mute)' : 'Sound off (M to turn on)'; }
+  A.onChange(soundButton);
+  ['keydown', 'pointerdown'].forEach(t => document.addEventListener(t, () => A.unlock(), {once: false, passive: true}));
+
+  function nameCard(s) {
+    const old = document.querySelector('.namecard'); if (old) old.remove();
+    if (!s.presenter || !S.SECTIONS[s.presenter]) return;
+    const el = document.createElement('div'); el.className = 'namecard';
+    el.innerHTML = `<b>${R.esc(s.presenter)}</b><span>${R.esc(S.SECTIONS[s.presenter])}</span>`;
+    document.querySelector('.stage').appendChild(el);
+    setTimeout(() => el.remove(), 3600);
+  }
+
   /* ---------- render ---------- */
   function render(prev, animate) {
+    const newScene = !prev || prev.scene !== scene();
     renderChrome();
-    renderPhones(!prev || prev.scene !== scene());
+    renderPhones(newScene);
     renderCenter(prev, animate);
+    if (newScene && animate) {
+      const h = $('title'); h.classList.remove('in'); void h.offsetWidth; h.classList.add('in');
+      if (!prev || prev.scene.presenter !== scene().presenter) nameCard(scene());
+    }
+    if (animate) cue(beat()); else A.mood(beat().mood || 'calm');
+    scheduleLoop();
   }
 
   /* ---------- actions ---------- */
@@ -319,8 +384,10 @@
   }
 
   document.addEventListener('click', e => {
-    const t = e.target.closest('[data-go],[data-beat],[data-act],#next,#prev,#restart,#notes-btn,#qa-btn');
+    const t = e.target.closest('[data-go],[data-beat],[data-act],#next,#prev,#restart,#notes-btn,#qa-btn,#sound-btn,#loop-btn');
     if (!t) { if (!e.target.closest('#qa')) closeQA(); return; }
+    if (t.id === 'sound-btn') return A.toggle();
+    if (t.id === 'loop-btn') return setLooping(!st.looping);
     if (t.id === 'next') return next();
     if (t.id === 'prev') return back();
     if (t.id === 'restart') return go(st.i, 0, true);
@@ -357,6 +424,8 @@
     else if (k === 'ArrowLeft' || k === 'PageUp') { e.preventDefault(); back(); }
     else if (k === 'r' || k === 'R') go(st.i, 0, true);
     else if (k === 'n' || k === 'N') toggleNotes();
+    else if (k === 'm' || k === 'M') A.toggle();
+    else if (k === 'l' || k === 'L') setLooping(!st.looping);
     else if (k === 'Escape') closeQA();
     else if (/^[0-9]$/.test(k)) {
       const slide = {'0': 10, '1': 11}[k] || +k;
@@ -369,6 +438,7 @@
   let rz; window.addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => { if (beat().center === 'overview' || beat().center === 'handphone') renderCenter(null, false); }, 150); });
 
   buildRail();
+  soundButton(A.on);
   fromHash();
   render(null, true);
   window.RTPLApp = {go, next, back, state: st};

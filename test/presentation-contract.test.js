@@ -13,11 +13,13 @@ const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 const S = require('../app/scenes.js');
 
 test('The page loads the single rules core before every interface script', () => {
-  const order = ['./rtpl-core.js', './app/geo.js', './app/scenes.js', './app/render.js', './app/main.js'];
+  const order = ['./rtpl-core.js', './app/geo.js', './app/scenes.js', './app/render.js', './app/sound.js', './app/main.js'];
   const at = order.map(src => html.indexOf(`<script src="${src}"></script>`));
   assert.ok(at.every(i => i > 0), 'all scripts present');
   assert.deepEqual([...at].sort((a, b) => a - b), at, 'scripts load in dependency order');
-  for (const f of ['app/geo.js', 'app/scenes.js', 'app/render.js', 'app/main.js']) {
+  const sound = fs.readFileSync(path.join(root, 'app/sound.js'), 'utf8');
+  for (const api of ['fetch(', 'XMLHttpRequest', 'localStorage', 'new Audio(']) assert.equal(sound.includes(api), false, `sound.js must not use ${api}`);
+  for (const f of ['app/geo.js', 'app/scenes.js', 'app/render.js', 'app/sound.js', 'app/main.js']) {
     const src = fs.readFileSync(path.join(root, f), 'utf8');
     assert.equal(src.includes('function budget('), false, `${f} must not re-implement the rules`);
   }

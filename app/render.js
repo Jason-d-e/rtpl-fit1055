@@ -159,7 +159,25 @@
       <div class="clockchip"><b id="mapclock">${time === null ? '—' : clock(time)}</b><small>simulation time</small></div>
       ${m.stale ? '<div class="staleflag">Route and service data out of date</div>' : ''}
       <div class="maplegend"><span><i style="background:#FFC20E;outline:2px solid #1F262D"></i>Protected route</span><span><i style="background:#0D7A64"></i>Safe or faster option</span><span><i style="background:#2C6BD6"></i>Verified outside delay</span><span><i style="background:#E2552F"></i>Blocked</span></div>
-      <div class="mapnote">Synthetic map · no GPS or routing service</div></div>`;
+      <div class="mapnote">Synthetic map · no GPS or routing service</div>${m.speedo ? `<div class="map-speedo">${speedo(m.speedo)}</div>` : ''}</div>`;
+  }
+
+  // A speedometer: green up to the legal limit, red beyond it. The needle sweeps in.
+  function speedo(sp) {
+    const max = 140, ang = v => -120 + 240 * Math.min(v, max) / max;
+    const pt = (a, r) => [100 + r * Math.sin(a * Math.PI / 180), 100 - r * Math.cos(a * Math.PI / 180)];
+    const arc = (a0, a1, r) => { const [x0, y0] = pt(a0, r), [x1, y1] = pt(a1, r); return `M${x0.toFixed(1)} ${y0.toFixed(1)}A${r} ${r} 0 ${a1 - a0 > 180 ? 1 : 0} 1 ${x1.toFixed(1)} ${y1.toFixed(1)}`; };
+    let ticks = '';
+    for (let v = 0; v <= max; v += 20) {
+      const [x0, y0] = pt(ang(v), 70), [x1, y1] = pt(ang(v), 62), [tx, ty] = pt(ang(v), 50);
+      ticks += `<path d="M${x0.toFixed(1)} ${y0.toFixed(1)}L${x1.toFixed(1)} ${y1.toFixed(1)}" stroke="#8995A1" stroke-width="2"/><text x="${tx.toFixed(1)}" y="${(ty + 4).toFixed(1)}" text-anchor="middle">${v}</text>`;
+    }
+    const over = sp.kmh > sp.limit;
+    return `<div class="speedo ${over ? 'over' : 'ok'}"><svg viewBox="0 0 200 150" aria-hidden="true">
+      <path d="${arc(-120, ang(sp.limit), 80)}" fill="none" stroke="#0D7A64" stroke-width="12" stroke-linecap="round"/>
+      <path d="${arc(ang(sp.limit) + 3, 120, 80)}" fill="none" stroke="#E2552F" stroke-width="12" stroke-linecap="round" opacity=".85"/>${ticks}
+      <g class="needle" style="--a:${ang(sp.kmh).toFixed(1)}deg"><path d="M100 104L96 100L100 26L104 100Z" fill="#1F262D"/></g><circle cx="100" cy="100" r="8" fill="#1F262D"/>
+      </svg><b>${sp.kmh} km/h</b><small>${esc(sp.label)}${over ? ` · legal ${sp.limit}` : ''}</small></div>`;
   }
 
   /* ---------- engine ---------- */
@@ -303,11 +321,13 @@
       return `<div class="seg p${i}" data-w="${pc(v)}" style="left:${pc(left)}%;width:0"><span>${n} ${v}</span></div>`; }).join('');
     let ticks = '';
     for (let m = 0; m <= scale; m += 10) ticks += `<span style="left:${pc(m)}%">${m} min</span>`;
-    const real = h.stage >= 2 ? `<div class="be-real"><h4>What the trip really takes</h4>
+    const real = h.stage >= 2 ? `<div class="be-real"><div class="be-grid"><div><h4>What the trip really takes</h4>
         <div class="bars"><div class="lbl"><b>AI time</b></div><div class="track"><div class="seg ai" data-w="${pc(h.ai)}" style="left:0;width:0"><span>${h.ai} min</span></div>
           <div class="gap-mark" style="left:${pc(h.ai)}%;width:${pc(p.total - h.ai)}%">${p.total - h.ai} min short</div></div>
         <div class="lbl"><b>Real trip</b></div><div class="track">${segs}</div><div></div><div class="axis">${ticks}</div></div>
-        <p class="be-sum">${p.travel} + ${p.signals} + ${p.wait} + ${p.access} + ${p.handover} = <b>${p.total} min</b></p>
+        <p class="be-sum">${p.travel} + ${p.signals} + ${p.wait} + ${p.access} + ${p.handover} = <b>${p.total} min</b></p></div>
+        <div class="be-speed">${speedo({kmh: h.speed.need, limit: h.speed.legal, label: 'Needed to reach ' + clock(h.ai)})}
+          <p>Only <b>${h.speed.rideLeft} min</b> left to ride ${h.speed.km} km</p></div></div>
         <div class="be-q">Who makes up the missing ${p.total - h.ai} minutes?</div>
         <small class="be-note">Example numbers for this demo, not measurements.</small></div>` : '';
     return `<div class="be"><div class="be-head"><span class="be-chip">Platform backend</span><h3>AI dispatch</h3><small>simulated</small></div>
@@ -417,7 +437,7 @@
       ? `<h3>Who sees what</h3><table class="matrix"><thead><tr><th>Field</th><th>Rider app</th><th>Customer app</th><th>Reviewer</th><th>Audit export</th></tr></thead><tbody>${rows.map((r, i) => `<tr class="${r[5] ? 'never' : ''}" style="animation-delay:${i * .05}s"><td>${r[0]}</td>${r.slice(1, 5).map(v => `<td>${mark(v)}</td>`).join('')}</tr>`).join('')}</tbody></table>
          <p class="sub" style="margin-top:.4rem">In this prototype the views are separated in the browser. A real system needs server-side roles, secure logs and retention rules.</p>`
       : `<h3>Never exported</h3><div class="evid missing" style="margin-bottom:.4rem"><span class="ico">✕</span><span>Rider identity and name</span></div><div class="evid missing" style="margin-bottom:.4rem"><span class="ico">✕</span><span>GPS trace and raw location</span></div><div class="evid missing" style="margin-bottom:.4rem"><span class="ico">✕</span><span>Raw evidence and messages</span></div><div class="evid missing"><span class="ico">✕</span><span>The reviewer’s free-text reason</span></div>`;
-    return `<div class="board"><div class="au"><div class="au-left"><h3 style="margin:0">Oversight record · case 04</h3><pre class="json" id="audit-json">${jsonHtml(a.record)}</pre>
+    return `<div class="board"><div class="au"><div class="au-left"><h3 style="margin:0">Oversight record · case 04</h3><pre class="json" id="audit-json">${jsonHtml(a.record).split('\n').map((l, i) => `<span class="jl" style="animation-delay:${i * 55}ms">${l}</span>`).join('\n')}</pre>
       <div class="row2"><button class="btn-dark" data-act="download">Download audit summary</button><span class="sub">RTPL-synthetic-audit.json</span></div></div><div>${right}</div></div></div>`;
   }
 
@@ -434,5 +454,5 @@
     return engineDeadline(out.engine) + (out.credit ? engineCredit(out.credit, 'Delay check · your inputs') : '<div class="msg info">Dispatch is held, so there is no delivery to check.</div>');
   }
 
-  root.RTPLRender = {esc, handPhone, apScreen, riderPhone, customerPhone, mapHtml, engine, overview, compare, review, audit, sandboxForm, sandboxOut, jsonHtml};
+  root.RTPLRender = {esc, handPhone, apScreen, speedo, riderPhone, customerPhone, mapHtml, engine, overview, compare, review, audit, sandboxForm, sandboxOut, jsonHtml};
 })(typeof globalThis !== 'undefined' ? globalThis : this);

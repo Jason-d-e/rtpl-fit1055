@@ -640,13 +640,13 @@ button { cursor: pointer; }
 .be-ticket b { grid-row: span 2; background: var(--app); color: #fff; border-radius: .5rem; padding: .3rem .5rem; font-size: 1rem; }
 .be-ticket span { font-weight: 700; font-size: .95rem; }
 .be-ticket small { color: var(--muted); font-size: .78rem; }
-.hp.anim .be-ticket { opacity: 0; }
-.hp.anim .be-ticket.landed { opacity: 1; }
+.hp.fly .be-ticket { opacity: 0; }
+.hp.fly .be-ticket.landed { opacity: 1; }
 .be-ai { display: flex; align-items: baseline; gap: .8rem; flex-wrap: wrap; background: var(--ai-soft); border-radius: .9rem; padding: .6rem .9rem; }
 .be-ai small { font-size: .9rem; color: #9A2E10; font-weight: 600; }
 .be-ai b { font-size: 2.7rem; font-weight: 800; font-stretch: 80%; color: var(--ai); line-height: 1; }
 .be-ai span { font-size: .95rem; color: #9A2E10; font-weight: 600; }
-.hp.anim .be-ai { animation: rise .5s 2.1s ease both; }
+.hp.fly .be-ai { animation: rise .5s var(--ai-delay, 2.1s) ease both; }
 .be-real { display: flex; flex-direction: column; gap: .5rem; animation: rise .5s ease both; }
 .be-real h4 { margin: 0; font-size: 1.05rem; }
 .be .bars .lbl { color: var(--muted); }
@@ -687,8 +687,46 @@ button { cursor: pointer; }
 .be .seg { font-size: .82rem; }
 .be-q { font-size: 1.55rem; }
 
+/* speedometer (slide 2 backend, slide 6 map) */
+.speedo { display: flex; flex-direction: column; align-items: center; text-align: center; line-height: 1.1; }
+.speedo svg { width: 100%; display: block; overflow: visible; }
+.speedo text { font-size: 11px; font-weight: 700; fill: var(--muted); font-family: var(--font); }
+.speedo .needle { transform-box: view-box; transform-origin: 100px 100px; transform: rotate(var(--a)); animation: sweep 1.5s cubic-bezier(.3, 1.35, .5, 1) both; }
+.speedo.over .needle { animation: sweep 1.5s cubic-bezier(.3, 1.35, .5, 1) both, shake .12s 1.5s ease-in-out infinite alternate; }
+@keyframes sweep { from { transform: rotate(-120deg); } to { transform: rotate(var(--a)); } }
+@keyframes shake { from { transform: rotate(calc(var(--a) - 2deg)); } to { transform: rotate(calc(var(--a) + 2deg)); } }
+.speedo b { font-size: 1.5rem; font-weight: 800; font-stretch: 80%; margin-top: -1.6rem; }
+.speedo.over b { color: var(--ai); }
+.speedo.ok b { color: var(--protect); }
+.speedo small { font-size: .72rem; color: var(--muted); font-weight: 600; margin-top: .15rem; }
+.map-speedo { position: absolute; right: .8rem; top: .7rem; width: 9.5rem; background: rgba(255, 255, 255, .94); border-radius: 1rem; padding: .45rem .5rem .5rem; box-shadow: 0 8px 22px rgba(20, 30, 40, .16); animation: rise .45s ease both; }
+.be-grid { display: grid; grid-template-columns: minmax(0, 1fr) 10.5rem; gap: 1rem; align-items: center; }
+.be-grid h4 { margin: 0 0 .4rem; font-size: 1.05rem; }
+.be-speed { background: var(--pavement); border-radius: 1rem; padding: .5rem .5rem .6rem; text-align: center; }
+.be-speed p { margin: .3rem 0 0; font-size: .82rem; color: var(--muted); }
+.be-speed p b { color: var(--ai); }
+
+/* oversight record types itself out */
+.json .jl { animation: typeIn .25s ease both; }
+@keyframes typeIn { from { opacity: 0; } to { opacity: 1; } }
+
+/* presenter name card (lower third) */
+.namecard { position: absolute; left: calc(var(--gap) * 2); bottom: calc(var(--gap) * 1.5); z-index: 25; display: flex; flex-direction: column; background: var(--asphalt); color: #fff; border-left: .45rem solid var(--signal); border-radius: .4rem 1rem 1rem .4rem; padding: .7rem 1.3rem .75rem 1rem; box-shadow: 0 16px 36px rgba(0, 0, 0, .3); animation: card 3.6s cubic-bezier(.3, .9, .3, 1) forwards; pointer-events: none; }
+.namecard b { font-size: 1.6rem; font-weight: 800; font-stretch: 82%; line-height: 1.05; }
+.namecard span { font-size: .9rem; color: var(--signal); font-weight: 600; }
+@keyframes card { 0% { transform: translateX(-120%); opacity: 0; } 12%, 82% { transform: none; opacity: 1; } 100% { transform: translateX(-120%); opacity: 0; } }
+.stage { position: relative; }
+.head h1.in { animation: rise .5s ease both; }
+.ctl .opt.off { color: #8995A1; border-style: dashed; text-decoration: line-through; }
+.ctl .icon { width: 2.1rem; padding: .38rem 0; font-size: 1rem; line-height: 1; }
+.rail button { padding: .35rem .55rem .35rem .35rem; }
+@media (max-width: 1500px) and (min-width: 901px) { .brand span { display: none; } .rail { gap: .1rem; } .rail button { font-size: .84rem; } }
+@media (max-width: 1300px) and (min-width: 901px) { .rail button .t { display: none; } }
+.speedo b { margin-top: -1.15rem; }
+
 @media (max-width: 900px) {
   .hp-guide { display: none; }
+  .be-grid { grid-template-columns: 1fr; }
   .hp { --dev-h: 560px; flex: none; height: auto; overflow: visible; padding-bottom: 1rem; }
   .hp-cam, .hp.with-side .hp-cam { position: relative; left: 0; top: 0; transform: none !important; margin: 1rem auto 0; }
   .hp-side { position: static; margin: 1rem; }
