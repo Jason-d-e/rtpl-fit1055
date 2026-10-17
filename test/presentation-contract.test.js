@@ -33,7 +33,7 @@ test('Main scenes follow slide 2 and slides 5 to 11 with the scripted presenters
     ['slide-6', 6, 'Yanyu Zhu', 'Check 1: can a rider make it in time?'],
     ['slide-7', 7, 'Yanyu Zhu', 'The road changes, the promise holds'],
     ['slide-8', 8, 'Yixuan Hu', 'A delay can only be excused once'],
-    ['slide-9', 9, 'Shengbao Lu', 'Late is not the same as at fault'],
+    ['slide-9', 9, 'Yixuan Hu', 'Late is not the same as at fault'],
     ['slide-10', 10, 'Shengbao Lu', 'Appeal: pause first, then a person decides'],
     ['slide-11', 11, 'Shengbao Lu', 'A record for oversight, and nothing more']
   ]);

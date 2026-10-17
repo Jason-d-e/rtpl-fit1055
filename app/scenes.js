@@ -286,11 +286,11 @@
           map: {rider: at('custA'), pins: pins(['rest', 'custA']), markers: ['kitchen'], routes: [{path: 'mainA', style: 'done'}]},
           engine: creditEngine('02', true),
           caption: 'Can the kitchen excuse those 5 minutes? No, it was already used once. But nothing shows the rider caused them, so the rider is still protected.',
-          note: 'Read 5 / 0 / 5, then the comparison box. Hand over to Shengbao.',
+          note: 'Read 5 / 0 / 5, then the comparison box. Keep going: next, two cases that are equally late.',
           rider: riderResult('02', D['02']), customer: customer.delivered(49, 44)}
       ]},
 
-    {id: 'slide-9', slide: 9, presenter: 'Shengbao Lu', title: 'Late is not the same as at fault', short: 'Evidence', group: 'main', caseNum: '03 · 04',
+    {id: 'slide-9', slide: 9, presenter: 'Yixuan Hu', title: 'Late is not the same as at fault', short: 'Evidence', group: 'main', caseNum: '03 · 04',
       phones: ['rider:03', 'rider:04'],
       beats: [
         {time: 44, center: 'compare', compare: {reveal: 0, cases: compareCases()},
@@ -303,7 +303,7 @@
           riderL: riderResult('03', D['03']), riderR: rider.trip('delivered', [{id: 'A101', deadline: 34, completed: 44}])},
         {time: 44, center: 'compare', result: 'Assessment can proceed. Nothing is applied yet.', compare: {reveal: 2, cases: compareCases()},
           caption: 'Case 04: a reliable record shows the rider chose to stop for 10 minutes. Now it can be assessed, but nothing is deducted yet, and the rider can see the record.',
-          note: 'Stress: assessed is not punished. The right phone offers Request human review: next slide.',
+          note: 'Stress: assessed is not punished. The right phone offers Request human review. Hand over to Shengbao for the appeal.',
           riderL: riderResult('03', D['03']), riderR: riderResult('04', D['04'])}
       ]},
 
@@ -403,7 +403,7 @@
   SCENES.forEach(s => s.beats.forEach((b, k) => { const a = (AUDIO[s.id] || [])[k] || []; b.theme = THEME_OF(s.presenter); b.sfx = a[0] || null; b.sfxAt = a[1] || 0; }));
 
   // Shown as a lower-third name card when a new presenter takes over.
-  const SECTIONS = {'Liyuan Liang': 'Slide 2 · The problem', 'Yanyu Zhu': 'Slides 5–7 · Checking the time', 'Yixuan Hu': 'Slide 8 · Counting delays', 'Shengbao Lu': 'Slides 9–11 · Evidence, appeal, oversight'};
+  const SECTIONS = {'Liyuan Liang': 'Slide 2 · The problem', 'Yanyu Zhu': 'Slides 5–7 · Checking the time', 'Yixuan Hu': 'Slides 8–9 · Delays and evidence', 'Shengbao Lu': 'Slides 10–12 · Appeal, oversight, program logic'};
 
   function bundleRows(stage) {
     const fasterNeed = id => ROUTE_NOW + C.budget(REMAINING(true)[id]);
