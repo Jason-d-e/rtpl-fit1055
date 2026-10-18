@@ -454,5 +454,41 @@
     return engineDeadline(out.engine) + (out.credit ? engineCredit(out.credit, 'Delay check · your inputs') : '<div class="msg info">Dispatch is held, so there is no delivery to check.</div>');
   }
 
-  root.RTPLRender = {esc, handPhone, apScreen, speedo, riderPhone, customerPhone, mapHtml, engine, overview, compare, review, audit, sandboxForm, sandboxOut, jsonHtml};
+  /* ---------- PPT link: big slide badge, slide-change flash and the handover card ---------- */
+  function pptBadge(s) {
+    if (!s.slide) return `<small>Q&amp;A extra</small><b>${esc(s.caseNum || '?')}</b><span>not a PPT slide</span>`;
+    return `<small>PPT slide</small><b>${s.slide}<i>/${S.PPT_TOTAL}</i></b><span>${esc(s.presenter)}</span>`;
+  }
+  function pptFlash(s) {
+    return `<div class="pf"><small>PPT slide</small><b>${s.slide}</b><span>${esc(s.presenter)} · ${esc(s.short)}</span></div>`;
+  }
+  // Consecutive PowerPoint-only slides grouped by presenter: [[3, 4, 'Liyuan Liang'], ...]
+  function pptRuns(slides) {
+    const runs = [];
+    slides.forEach(n => {
+      const who = S.PPT_OWNER[n], last = runs[runs.length - 1];
+      if (last && last[2] === who && last[1] === n - 1) last[1] = n; else runs.push([n, n, who]);
+    });
+    return runs;
+  }
+  const first = name => esc(String(name).split(' ')[0]);
+  function gate(from, to, pptOnly) {
+    const runs = pptRuns(pptOnly);
+    const switchTo = runs.length ? `<div class="g-ppt"><small>Now switch to PowerPoint</small>
+        ${runs.map(([a, b, who]) => `<div class="g-run"><b>${a === b ? 'Slide ' + a : 'Slides ' + a + '–' + b}</b><span>${esc(who)}</span></div>`).join('')}</div>` : '';
+    const handover = to && to.presenter !== from.presenter;
+    const nextLine = to
+      ? `<div class="g-next"><small>${runs.length ? 'Then the website continues at' : handover ? 'Hand over to' : 'Next on the website'}</small>
+          <div class="g-run"><b>PPT slide ${to.slide}</b><span>${esc(to.presenter)} · ${esc(to.short)}</span></div>
+          <p>Press <kbd>→</kbd> only when ${first(to.presenter)} starts slide ${to.slide}.</p></div>`
+      : `<div class="g-next end"><small>Website part finished</small><p>Stay in PowerPoint from slide ${from.slide + 1}. The website is only needed again for questions.</p></div>`;
+    return `<div class="g">
+      <div class="g-top"><span class="g-done">✓</span><div><small>End of PPT slide ${from.slide} on the website</small>
+        <h2>${handover || !to ? first(from.presenter) + '’s website part is done' : 'Slide ' + from.slide + ' is done'}</h2></div></div>
+      ${switchTo}${nextLine}
+      <div class="g-act"><button type="button" data-act="gate-stay">← Stay on slide ${from.slide}</button>${to ? `<button type="button" class="go" data-act="gate-go">Start PPT slide ${to.slide} →</button>` : ''}</div>
+    </div>`;
+  }
+
+  root.RTPLRender = {esc, pptBadge, pptFlash, gate, handPhone, apScreen, speedo, riderPhone, customerPhone, mapHtml, engine, overview, compare, review, audit, sandboxForm, sandboxOut, jsonHtml};
 })(typeof globalThis !== 'undefined' ? globalThis : this);

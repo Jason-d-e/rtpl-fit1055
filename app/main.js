@@ -6,15 +6,19 @@
   const $ = id => document.getElementById(id);
   const SCENES = S.SCENES;
   const MAIN = SCENES.filter(s => s.group === 'main');
-  const reduced = () => window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // The animations are the demo, so the Windows/OS "reduce motion" setting is not followed
+  // (it silently turned every scene into a still on some laptops). Add ?calm to the URL for a still version.
+  const CALM = new URLSearchParams(location.search).has('calm');
+  const reduced = () => CALM;
 
-  const st = {i: 0, b: 0, live: {}, sb: {...S.SANDBOX_DEFAULT}, prev: null, raf: 0, notes: false, timers: [], looping: true, loop: 0};
+  const st = {i: 0, b: 0, live: {}, sb: {...S.SANDBOX_DEFAULT}, prev: null, raf: 0, notes: false, timers: [], looping: true, loop: 0, gate: null};
 
   /* ---------- navigation ---------- */
   function scene() { return SCENES[st.i]; }
   function beat() { return scene().beats[st.b]; }
 
   function go(i, b, animate) {
+    hideGate();
     const prev = {scene: scene(), beat: beat(), i: st.i, b: st.b};
     st.i = Math.max(0, Math.min(SCENES.length - 1, i));
     st.b = Math.max(0, Math.min(scene().beats.length - 1, b));
@@ -23,14 +27,38 @@
   }
   function next() {
     const s = scene();
+    if (st.gate) { const to = st.gate.to; if (to) go(SCENES.indexOf(to), 0, true); return; }
     if (st.b < s.beats.length - 1) return go(st.i, st.b + 1, true);
     const m = MAIN.indexOf(s);
-    if (m >= 0 && m < MAIN.length - 1) go(SCENES.indexOf(MAIN[m + 1]), 0, true);
+    if (m < 0) return;
+    const to = MAIN[m + 1] || null;
+    // A new presenter, or PPT slides in between that only exist in PowerPoint: stop at a handover card first.
+    if (!to || to.presenter !== s.presenter || to.slide !== s.slide + 1) return showGate(s, to);
+    go(SCENES.indexOf(to), 0, true);
   }
   function back() {
+    if (st.gate) { hideGate(); renderChrome(); scheduleLoop(); return; }
     if (st.b > 0) return go(st.i, st.b - 1, false);
     const m = MAIN.indexOf(scene());
     if (m > 0) { const p = SCENES.indexOf(MAIN[m - 1]); go(p, SCENES[p].beats.length - 1, false); }
+  }
+
+  /* ---------- handover card between presenters / back to PowerPoint ---------- */
+  function showGate(from, to) {
+    const pptOnly = [];
+    for (let n = from.slide + 1; n < (to ? to.slide : S.PPT_TOTAL + 1); n++) pptOnly.push(n);
+    st.gate = {from, to};
+    clearTimeout(st.loop); clearTimers(); cancelAnimationFrame(st.raf);
+    const g = $('gate');
+    g.innerHTML = R.gate(from, to, pptOnly);
+    g.hidden = false;
+    A.fx('ping');
+    renderChrome();
+  }
+  function hideGate() {
+    if (!st.gate) return;
+    st.gate = null;
+    $('gate').hidden = true;
   }
 
   function hashFor() { return '#' + scene().id + (st.b ? '/' + (st.b + 1) : ''); }
@@ -60,17 +88,19 @@
       const k = MAIN.findIndex(x => x.id === el.dataset.go);
       el.classList.toggle('done', k >= 0 && k < MAIN.indexOf(s));
     });
-    $('tag').innerHTML = (s.slide ? `<span class="slide">Slide ${s.slide}</span><span class="who">${R.esc(s.presenter)}</span>` : '<span class="slide">Q&amp;A extra</span>') +
-      (s.caseNum ? `<span class="case">Case ${R.esc(s.caseNum)}</span>` : '') + '<span>Made-up order A101 · Noodle Kitchen → Maple Court</span>';
+    $('ppt').innerHTML = R.pptBadge(s);
+    $('tag').innerHTML = (s.caseNum ? `<span class="case">Case ${R.esc(s.caseNum)}</span>` : '') + '<span>Made-up order A101 · Noodle Kitchen → Maple Court</span>';
     $('title').textContent = s.title;
     const cap = st.live.caption || b.caption;
     const res = st.live.result !== undefined ? st.live.result : b.result;
     $('caption').textContent = cap;
     $('result').innerHTML = res ? `<span class="result">${R.esc(res)}</span>` : '';
     $('dots').innerHTML = s.beats.length > 1 ? s.beats.map((_, k) => `<button type="button" class="${k <= st.b ? 'on' : ''}" data-beat="${k}" aria-label="Step ${k + 1} of ${s.beats.length}"></button>`).join('') : '';
-    const m = MAIN.indexOf(s);
-    $('hint').textContent = st.b < s.beats.length - 1 ? `Step ${st.b + 1} of ${s.beats.length}` : m >= 0 && m < MAIN.length - 1 ? `Next: slide ${MAIN[m + 1].slide}` : s.group === 'main' ? 'Back to the slides' : '';
-    $('next').disabled = st.b === s.beats.length - 1 && (m < 0 || m === MAIN.length - 1);
+    const m = MAIN.indexOf(s), last = st.b === s.beats.length - 1, to = m >= 0 ? MAIN[m + 1] || null : null;
+    const handover = last && m >= 0 && (!to || to.presenter !== s.presenter || to.slide !== s.slide + 1);
+    $('hint').textContent = !last ? `Step ${st.b + 1} of ${s.beats.length}` : handover ? 'Last step · → shows the handover card' : to ? `Last step · → goes to PPT slide ${to.slide}` : '';
+    $('next').disabled = (last && m < 0) || (st.gate && !st.gate.to);
+    $('next').textContent = st.gate ? (st.gate.to ? `Start slide ${st.gate.to.slide} →` : 'Done') : handover ? 'Handover →' : 'Next →';
     $('notes').innerHTML = `<b>${s.slide ? 'Slide ' + s.slide + ' · ' + R.esc(s.presenter) : 'Q&A extra'}</b>${R.esc(b.note || '')}<br><small>Keys: <kbd>→</kbd>/<kbd>Space</kbd> next · <kbd>←</kbd> back · <kbd>R</kbd> restart scene · <kbd>N</kbd> notes · <kbd>M</kbd> sound · <kbd>L</kbd> loop · <kbd>2</kbd>, <kbd>5</kbd>–<kbd>9</kbd>, <kbd>0</kbd>=10, <kbd>1</kbd>=11 jump</small>`;
     $('notes').hidden = !st.notes;
     if (location.hash !== hashFor()) history.replaceState(null, '', hashFor());
@@ -293,7 +323,7 @@
   function scheduleLoop() {
     clearTimeout(st.loop);
     const ms = cycleFor(beat());
-    if (st.looping && ms && !reduced()) st.loop = setTimeout(replay, ms);
+    if (st.looping && ms && !reduced() && !st.gate) st.loop = setTimeout(replay, ms);
   }
   function restartCss(el) {
     if (!el || !el.getAnimations) return;
@@ -348,6 +378,19 @@
     }, 2800);
   }
 
+  // A large "PPT slide N" flashes in the middle whenever the website moves to a new PPT slide.
+  let flashTimer = 0;
+  function pptFlash(s, animate) {
+    clearTimeout(flashTimer);
+    const old = document.querySelector('.pptflash'); if (old) old.remove();
+    const b = $('ppt'); b.classList.remove('pulse'); void b.offsetWidth; b.classList.add('pulse');
+    if (!animate || reduced()) return;
+    const el = document.createElement('div'); el.className = 'pptflash'; el.setAttribute('aria-hidden', 'true');
+    el.innerHTML = R.pptFlash(s);
+    document.querySelector('.stage').appendChild(el);
+    flashTimer = setTimeout(() => el.remove(), 1900);
+  }
+
   /* ---------- render ---------- */
   function render(prev, animate) {
     const newScene = !prev || prev.scene !== scene();
@@ -355,6 +398,7 @@
     renderPhones(newScene);
     renderCenter(prev, animate);
     if (newScene && animate) { const h = $('title'); h.classList.remove('in'); void h.offsetWidth; h.classList.add('in'); }
+    if (newScene && scene().slide) pptFlash(scene(), animate);
     if (!prev || prev.scene.presenter !== scene().presenter) nameCard(scene(), animate);
     if (animate) cue(beat()); else A.theme(beat().theme);
     scheduleLoop();
@@ -407,6 +451,8 @@
     if (t.dataset.go) { closeQA(); const i = SCENES.findIndex(s => s.id === t.dataset.go); return go(i, 0, true); }
     if (t.dataset.beat) return go(st.i, +t.dataset.beat, +t.dataset.beat === st.b + 1);
     const act = t.dataset.act;
+    if (act === 'gate-go') return next();
+    if (act === 'gate-stay') return back();
     if (act === 'next') return next();
     if (act === 'appeal') {
       if (scene().id === 'slide-10' && st.b === 0) return next();
@@ -427,12 +473,22 @@
   function closeQA() { $('qa').classList.remove('open'); $('qa-btn').setAttribute('aria-expanded', 'false'); }
   function toggleNotes() { st.notes = !st.notes; $('notes').hidden = !st.notes; $('notes-btn').setAttribute('aria-pressed', st.notes); }
 
+  let lastStep = 0;
   document.addEventListener('keydown', e => {
     if (e.target.closest && e.target.closest('input, textarea, select')) return;
     if (e.metaKey || e.ctrlKey || e.altKey) return;
     const k = e.key;
-    if (k === 'ArrowRight' || k === 'PageDown' || k === ' ') { e.preventDefault(); next(); }
-    else if (k === 'ArrowLeft' || k === 'PageUp') { e.preventDefault(); back(); }
+    const step = k === 'ArrowRight' || k === 'PageDown' || k === ' ' || k === 'ArrowLeft' || k === 'PageUp';
+    if (step) {
+      e.preventDefault();
+      // A held-down key or a double press of the clicker moves only one step.
+      const now = performance.now();
+      if (e.repeat || now - lastStep < 350) return;
+      lastStep = now;
+    }
+    if (k === 'ArrowRight' || k === 'PageDown' || k === ' ') next();
+    else if (k === 'ArrowLeft' || k === 'PageUp') back();
+    else if (k === 'Escape' && st.gate) back();
     else if (k === 'r' || k === 'R') go(st.i, 0, true);
     else if (k === 'n' || k === 'N') toggleNotes();
     else if (k === 'm' || k === 'M') A.toggle();
@@ -445,9 +501,10 @@
     }
   });
 
-  window.addEventListener('hashchange', () => { if (location.hash !== hashFor() && fromHash()) render(null, false); });
+  window.addEventListener('hashchange', () => { if (location.hash !== hashFor() && fromHash()) { hideGate(); render(null, false); } });
   let rz; window.addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => { if (beat().center === 'overview' || beat().center === 'handphone') renderCenter(null, false); }, 150); });
 
+  document.body.classList.toggle('calm', CALM);
   buildRail();
   soundButton(A.on);
   fromHash();

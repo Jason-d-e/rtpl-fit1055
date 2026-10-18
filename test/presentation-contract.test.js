@@ -82,3 +82,16 @@ test('Old Case Lab links still resolve to a scene', () => {
   const main = fs.readFileSync(path.join(root, 'app/main.js'), 'utf8');
   for (const k of ['01', '02', '03', '04', '05', '06', '07']) assert.ok(main.includes(`'${k}':`), `alias #${k}`);
 });
+
+test('Every website slide names the same presenter as the PPT, and all 15 PPT slides have an owner', () => {
+  assert.equal(Object.keys(S.PPT_OWNER).length, S.PPT_TOTAL);
+  for (const s of S.SCENES.filter(x => x.group === 'main')) assert.equal(S.PPT_OWNER[s.slide], s.presenter, `slide ${s.slide}`);
+});
+
+test('Animations do not depend on the OS reduce-motion setting (still version only with ?calm)', () => {
+  const main = fs.readFileSync(path.join(root, 'app/main.js'), 'utf8');
+  const css = fs.readFileSync(path.join(root, 'assets/app.css'), 'utf8');
+  assert.ok(!main.includes("matchMedia('(prefers-reduced-motion"));
+  assert.ok(!css.includes('@media (prefers-reduced-motion'));
+  assert.ok(main.includes("has('calm')"));
+});

@@ -67,7 +67,42 @@ button { cursor: pointer; }
 
 /* ---------- scene heading ---------- */
 .stage { height: calc(100dvh - var(--bar-h) - var(--foot-h)); padding: var(--gap); padding-bottom: 0; display: grid; grid-template-rows: var(--head-h) 1fr; gap: var(--gap); }
-.head { display: grid; grid-template-columns: 1fr auto; align-items: end; gap: 1rem; min-height: 0; }
+.head { display: grid; grid-template-columns: auto 1fr auto; align-items: end; gap: 1rem; min-height: 0; }
+/* which PPT slide the website belongs to */
+.ppt { align-self: stretch; display: flex; flex-direction: column; justify-content: center; align-items: center; min-width: 7.2rem; padding: .25rem .9rem .3rem; background: var(--asphalt); color: #fff; border-radius: 1rem; border-bottom: .4rem solid var(--signal); text-align: center; line-height: 1; }
+.ppt small { font-size: .68rem; letter-spacing: .14em; text-transform: uppercase; font-weight: 700; color: #B9C2CB; }
+.ppt b { font-size: 3.3rem; font-weight: 800; font-stretch: 76%; color: var(--signal); margin: .1rem 0 .15rem; }
+.ppt b i { font-style: normal; font-size: 1.1rem; color: #8995A1; margin-left: .15rem; }
+.ppt span { font-size: .74rem; font-weight: 700; white-space: nowrap; }
+.ppt.pulse { animation: pop .5s cubic-bezier(.2, .9, .3, 1.4); }
+.pptflash { position: absolute; inset: 0; z-index: 30; display: grid; place-items: center; pointer-events: none; }
+.pptflash .pf { display: flex; flex-direction: column; align-items: center; gap: .3rem; background: rgba(31, 38, 45, .93); color: #fff; border-radius: 2rem; border-bottom: .6rem solid var(--signal); padding: 1.3rem 3.4rem 1.5rem; box-shadow: 0 30px 60px rgba(0, 0, 0, .35); animation: pptflash 1.9s ease both; }
+.pptflash small { font-size: 1rem; letter-spacing: .2em; text-transform: uppercase; font-weight: 700; color: #B9C2CB; }
+.pptflash b { font-size: 8rem; line-height: .9; font-weight: 800; font-stretch: 76%; color: var(--signal); }
+.pptflash span { font-size: 1.25rem; font-weight: 700; }
+@keyframes pptflash { 0% { opacity: 0; transform: scale(.85); } 14% { opacity: 1; transform: none; } 72% { opacity: 1; transform: none; } 100% { opacity: 0; transform: scale(1.04); } }
+/* handover card: who is next, and which slides are PowerPoint-only */
+.gate { position: absolute; inset: 0; z-index: 40; display: grid; place-items: center; padding: 2rem; background: rgba(22, 28, 34, .95); color: #fff; animation: rise .35s ease both; }
+.gate[hidden] { display: none; }
+.gate .g { width: min(62rem, 100%); display: flex; flex-direction: column; gap: 1.5rem; }
+.g-top { display: flex; align-items: center; gap: 1.1rem; }
+.g-done { display: grid; place-items: center; width: 3.4rem; height: 3.4rem; border-radius: 50%; background: var(--protect); font-size: 1.7rem; font-weight: 800; flex: none; }
+.gate small { display: block; font-size: .85rem; letter-spacing: .12em; text-transform: uppercase; font-weight: 700; color: #B9C2CB; margin-bottom: .45rem; }
+.gate h2 { margin: 0; font-size: 2.6rem; line-height: 1.05; font-weight: 800; font-stretch: 80%; }
+.g-ppt, .g-next { border-radius: 1.3rem; padding: 1.1rem 1.4rem 1.2rem; background: #2B343D; }
+.g-ppt { border-left: .6rem solid #D04A2A; }
+.g-next { border-left: .6rem solid var(--signal); }
+.g-next.end { border-left-color: var(--protect); }
+.g-run { display: flex; align-items: baseline; gap: 1rem; flex-wrap: wrap; }
+.g-run + .g-run { margin-top: .35rem; }
+.g-run b { font-size: 2.3rem; font-weight: 800; font-stretch: 80%; color: var(--signal); }
+.g-ppt .g-run b { color: #fff; }
+.g-run span { font-size: 1.25rem; font-weight: 600; color: #DDE3E8; }
+.g-next p { margin: .7rem 0 0; font-size: 1.15rem; color: #DDE3E8; }
+.gate kbd { display: inline-block; background: var(--signal); color: var(--asphalt); border-radius: .4rem; padding: 0 .45rem; font-weight: 800; font-family: inherit; }
+.g-act { display: flex; justify-content: space-between; gap: 1rem; }
+.g-act button { border: 1px solid #5B6672; background: transparent; color: #fff; border-radius: 999px; padding: .6rem 1.2rem; font-size: 1rem; }
+.g-act .go { background: var(--signal); border-color: var(--signal); color: var(--asphalt); font-weight: 800; }
 .tag { display: flex; gap: .5rem; align-items: center; font-size: .85rem; color: var(--muted); margin-bottom: .2rem; }
 .tag .slide { background: var(--asphalt); color: #fff; border-radius: 6px; padding: .1rem .5rem; font-weight: 700; }
 .tag .who { font-weight: 600; color: var(--asphalt); }
@@ -474,10 +509,9 @@ button { cursor: pointer; }
   .fx { grid-template-columns: 1fr 1fr; }
   .foot { height: auto; flex-wrap: wrap; white-space: normal; padding: 12px 16px; }
 }
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
-  .banner { animation: none; }
-}
+/* Still version only on request (?calm in the URL); the OS reduce-motion setting is deliberately not followed. */
+body.calm *, body.calm *::before, body.calm *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+body.calm .banner { animation: none; }
 
 /* ---------- second pass ---------- */
 .trace code { white-space: normal; }

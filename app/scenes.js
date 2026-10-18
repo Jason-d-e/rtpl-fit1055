@@ -404,6 +404,10 @@
 
   // Shown as a lower-third name card when a new presenter takes over.
   const SECTIONS = {'Liyuan Liang': 'Slide 2 · The problem', 'Yanyu Zhu': 'Slides 5–7 · Checking the time', 'Yixuan Hu': 'Slides 8–9 · Delays and evidence', 'Shengbao Lu': 'Slides 10–12 · Appeal, oversight, program logic'};
+  // Who presents each of the 15 PPT slides; the handover card uses it for the slides shown only in PowerPoint.
+  const PPT_TOTAL = 15;
+  const PPT_OWNER = {1: 'Liyuan Liang', 2: 'Liyuan Liang', 3: 'Liyuan Liang', 4: 'Liyuan Liang', 5: 'Yanyu Zhu', 6: 'Yanyu Zhu', 7: 'Yanyu Zhu',
+    8: 'Yixuan Hu', 9: 'Yixuan Hu', 10: 'Shengbao Lu', 11: 'Shengbao Lu', 12: 'Shengbao Lu', 13: 'Can Shang', 14: 'Enci Li', 15: 'Liyuan Liang'};
 
   function bundleRows(stage) {
     const fasterNeed = id => ROUTE_NOW + C.budget(REMAINING(true)[id]);
@@ -444,6 +448,6 @@
 
   function byId(id) { return SCENES.find(s => s.id === id) || null; }
 
-  return {SCENES, byId, clock, ORDER, ITEMS, SPEED, SECTIONS, BASE, AI_PROPOSED, B102_ACCEPTED, ROUTE_NOW, REVIEW_REASON, BOUNDARY, SIMULATED, SANDBOX_DEFAULT, sandbox,
+  return {SCENES, byId, clock, ORDER, ITEMS, SPEED, SECTIONS, PPT_TOTAL, PPT_OWNER, BASE, AI_PROPOSED, B102_ACCEPTED, ROUTE_NOW, REVIEW_REASON, BOUNDARY, SIMULATED, SANDBOX_DEFAULT, sandbox,
     results: {CHECK01, CLOSURE, FASTER, STALE, D, APPEAL04, REVIEW04, AUDIT04}, CASE, EFFECTS: C.EFFECTS, CONFIG: C.CONFIG, core: C};
 });
