@@ -14,13 +14,15 @@
   // hold: the page has just opened on slide 2 and waits on its first frame until the presenter starts it.
   // deck: the PowerPoint slides shown inside the page (see "PowerPoint slides" below).
   const st = {i: 0, b: 0, live: {}, sb: {...S.SANDBOX_DEFAULT}, prev: null, raf: 0, notes: false, timers: [], looping: true, loop: 0, gate: null, hold: false,
-    deck: null, deckOpen: false, deckBack: null, deckMuted: false};
+    deck: null, deckOpen: false, deckBack: null, deckMuted: false,
+    paused: false, pauseMuted: false, pausedAnims: []};   // Pause (K): the current step's motion stops where it is
 
   /* ---------- navigation ---------- */
   function scene() { return SCENES[st.i]; }
   function beat() { return scene().beats[st.b]; }
 
   function go(i, b, animate) {
+    setPaused(false);
     hideGate();
     // Leaving the opening hold plays the full scene entrance, as a fresh page load used to.
     const prev = st.hold ? null : {scene: scene(), beat: beat(), i: st.i, b: st.b};
@@ -32,6 +34,7 @@
   }
   function next() {
     const s = scene();
+    setPaused(false);
     if (st.hold) return go(st.i, 0, true);
     if (st.gate) return st.deck && st.gate.pptOnly.length ? openDeck('gate') : gateGo();
     if (st.b < s.beats.length - 1) return go(st.i, st.b + 1, true);
@@ -43,6 +46,7 @@
     go(SCENES.indexOf(to), 0, true);
   }
   function back() {
+    setPaused(false);
     if (st.gate) { hideGate(); renderChrome(); scheduleLoop(); return; }
     if (st.b > 0) return go(st.i, st.b - 1, false);
     const m = MAIN.indexOf(scene());
@@ -96,6 +100,7 @@
   }
   function openDeck(from) {
     if (!st.deck) return openSetup();
+    setPaused(false);
     const to = from === 'gate' && st.gate ? st.gate.to : null;
     st.deckBack = to ? 'gate' : 'stay';
     $('deck-back').textContent = to ? `Back to the website · PPT slide ${to.slide} →` : 'Back to the website →';
@@ -114,6 +119,16 @@
     document.querySelector('.stage').focus({preventScroll: true});
     if (follow && st.deckBack === 'gate') return gateGo();
     scheduleLoop();
+  }
+  // One-click setup for the presenting computer: open the site at …/#ppt=<Canva link>. The link is saved in this
+  // browser and the address goes back to the scene; the part after # is never sent to the web server.
+  function takePptLink(raw) {
+    let text = raw;
+    try { text = decodeURIComponent(raw); } catch (e) { /* use it as it is */ }
+    const r = deckParse(text);
+    if (r.error) { openSetup(); $('ds-msg').textContent = r.error; return; }
+    deckStore(r.url);
+    setDeck(r.url);
   }
   function openSetup() {
     $('ds-input').value = st.deck || '';
@@ -173,11 +188,11 @@
     $('dots').innerHTML = s.beats.length > 1 ? s.beats.map((_, k) => `<button type="button" class="${k <= st.b ? 'on' : ''}" data-beat="${k}" aria-label="Step ${k + 1} of ${s.beats.length}"></button>`).join('') : '';
     const m = MAIN.indexOf(s), last = st.b === s.beats.length - 1, to = m >= 0 ? MAIN[m + 1] || null : null;
     const handover = last && m >= 0 && (!to || to.presenter !== s.presenter || to.slide !== s.slide + 1);
-    $('hint').textContent = st.hold ? 'Press → to start' : !last ? `Step ${st.b + 1} of ${s.beats.length}` : handover ? 'Last step · → shows the handover card' : to ? `Last step · → goes to PPT slide ${to.slide}` : '';
+    $('hint').textContent = st.hold ? 'Press → to start' : st.paused ? 'Paused · K or Resume to continue' : !last ? `Step ${st.b + 1} of ${s.beats.length}` : handover ? 'Last step · → shows the handover card' : to ? `Last step · → goes to PPT slide ${to.slide}` : '';
     const toSlides = st.gate && st.deck && st.gate.pptOnly.length;   // → on this card opens the slides
     $('next').disabled = (last && m < 0) || (st.gate && !st.gate.to && !toSlides);
     $('next').textContent = st.hold ? 'Start →' : toSlides ? 'Show slides →' : st.gate ? (st.gate.to ? `Start slide ${st.gate.to.slide} →` : 'Done') : handover ? 'Handover →' : 'Next →';
-    $('notes').innerHTML = `<b>${s.slide ? 'Slide ' + s.slide + ' · ' + R.esc(s.presenter) : 'Q&A extra'}</b>${R.esc(b.note || '')}<br><small>Keys: <kbd>→</kbd>/<kbd>Space</kbd> next · <kbd>←</kbd> back · <kbd>R</kbd> restart scene · <kbd>N</kbd> notes · <kbd>M</kbd> sound · <kbd>L</kbd> loop · <kbd>P</kbd> PPT slides · <kbd>2</kbd>, <kbd>5</kbd>–<kbd>9</kbd>, <kbd>0</kbd>=10, <kbd>1</kbd>=11 jump</small>`;
+    $('notes').innerHTML = `<b>${s.slide ? 'Slide ' + s.slide + ' · ' + R.esc(s.presenter) : 'Q&A extra'}</b>${R.esc(b.note || '')}<br><small>Keys: <kbd>→</kbd>/<kbd>Space</kbd> next · <kbd>←</kbd> back · <kbd>R</kbd> restart scene · <kbd>N</kbd> notes · <kbd>K</kbd> pause · <kbd>M</kbd> sound · <kbd>L</kbd> loop · <kbd>P</kbd> PPT slides · <kbd>2</kbd>, <kbd>5</kbd>–<kbd>9</kbd>, <kbd>0</kbd>=10, <kbd>1</kbd>=11 jump</small>`;
     $('notes').hidden = !st.notes;
     if (location.hash !== hashFor()) history.replaceState(null, '', hashFor());
   }
@@ -263,11 +278,11 @@
     const m = b.map, end = riderPoint(m);
     const set = (x, y) => el.setAttribute('transform', `translate(${x.toFixed(1)} ${y.toFixed(1)})`);
     if (!m.move || !animate || reduced()) { set(end[0], end[1]); return; }
-    const t0 = performance.now(), dur = 2600;
+    const t0 = clock(), dur = 2600;
     const fromClock = m.clockFrom !== undefined ? m.clockFrom : (prev && prev.beat && prev.beat.time !== null ? prev.beat.time : b.time);
     const ease = x => x < .5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2;
-    const step = now => {
-      const k = Math.min(1, (now - t0) / dur), e = ease(k);
+    const step = () => {
+      const k = Math.min(1, (clock() - t0) / dur), e = ease(k);
       const p = G.pointAt(m.move.path, m.move.from + (m.move.to - m.move.from) * e);
       set(p[0], p[1]);
       if (clk && b.time !== null) clk.textContent = S.clock(Math.round(fromClock + (b.time - fromClock) * e));
@@ -302,8 +317,14 @@
   /* ---------- the hand-held phone: ordering (slide 2) and order status (slide 5) ---------- */
   // Index fingertip of the tapping hand as a fraction of its box (FINGER in render.js; transform-origin in app.css).
   const FINGER_TIP = {x: 0.136, y: 0.025};
-  function later(ms, fn) { st.timers.push(setTimeout(fn, ms)); }
-  function clearTimers() { st.timers.forEach(clearTimeout); st.timers = []; }
+  // Step timers run on a clock that stands still while paused, so a resumed step carries on where it stopped.
+  function later(ms, fn) {
+    const t = {due: clock() + ms, id: 0};
+    t.arm = () => { t.id = setTimeout(() => { st.timers = st.timers.filter(x => x !== t); fn(); }, Math.max(0, t.due - clock())); };
+    st.timers.push(t);
+    if (!st.paused) t.arm();
+  }
+  function clearTimers() { st.timers.forEach(t => clearTimeout(t.id)); st.timers = []; }
 
   function handFx(h, prev, animate) {
     const hp = $('hp'), cam = $('hp-cam'), dev = $('hp-dev'), scr = $('hp-screen'), finger = $('hp-finger');
@@ -401,7 +422,7 @@
   function scheduleLoop() {
     clearTimeout(st.loop);
     const ms = cycleFor(beat());
-    if (st.looping && ms && !reduced() && !st.gate && !st.hold) st.loop = setTimeout(replay, ms);
+    if (st.looping && ms && !reduced() && !st.gate && !st.hold && !st.paused) st.loop = setTimeout(replay, ms);
   }
   function restartCss(el) {
     if (!el || !el.getAnimations) return;
@@ -419,6 +440,33 @@
     restartCss($('left')); restartCss($('right'));
     cue(b);
     scheduleLoop();
+  }
+  /* ---------- pause: freeze the current step (motion, step timers, replays, music) until resumed ---------- */
+  let pausedAt = 0, pausedFor = 0;
+  function clock() { return (st.paused ? pausedAt : performance.now()) - pausedFor; }
+  function setPaused(v) {
+    if (v === st.paused) return;
+    if (v) {
+      pausedAt = performance.now();
+      st.paused = true;
+      clearTimeout(st.loop);
+      st.timers.forEach(t => clearTimeout(t.id));
+      // CSS animations, transitions and scripted animations that are still running; finished ones stay as they are.
+      st.pausedAnims = document.getAnimations().filter(a => a.playState === 'running');
+      st.pausedAnims.forEach(a => a.pause());
+      if (A.on && !st.hold) { A.toggle(); st.pauseMuted = true; }
+    } else {
+      pausedFor += performance.now() - pausedAt;
+      st.paused = false;
+      st.pausedAnims.forEach(a => { if (a.playState === 'paused') a.play(); });
+      st.pausedAnims = [];
+      st.timers.forEach(t => t.arm());
+      if (st.pauseMuted) { st.pauseMuted = false; A.toggle(); }
+      scheduleLoop();
+    }
+    const btn = $('pause-btn');
+    btn.setAttribute('aria-pressed', st.paused); btn.textContent = st.paused ? 'Resume' : 'Pause';
+    renderChrome();
   }
   function setLooping(v) {
     st.looping = v; $('loop-btn').setAttribute('aria-pressed', v); $('loop-btn').classList.toggle('off', !v);
@@ -518,8 +566,9 @@
   }
 
   document.addEventListener('click', e => {
-    const t = e.target.closest('[data-go],[data-beat],[data-act],#next,#prev,#restart,#notes-btn,#qa-btn,#sound-btn,#loop-btn,#ppt-btn');
+    const t = e.target.closest('[data-go],[data-beat],[data-act],#next,#prev,#restart,#notes-btn,#qa-btn,#sound-btn,#loop-btn,#ppt-btn,#pause-btn');
     if (!t) { if (!e.target.closest('#qa')) closeQA(); return; }
+    if (t.id === 'pause-btn') return setPaused(!st.paused);
     if (t.id === 'ppt-btn') return st.deckOpen ? closeDeck(false) : openDeck('bar');
     if (t.id === 'sound-btn') return A.toggle();
     if (t.id === 'loop-btn') return setLooping(!st.looping);
@@ -582,6 +631,8 @@
     else if (k === 'n' || k === 'N') toggleNotes();
     else if (k === 'm' || k === 'M') A.toggle();
     else if (k === 'l' || k === 'L') setLooping(!st.looping);
+    // K, or a clicker's blank-screen button (it sends B or .), pauses and resumes.
+    else if (k === 'k' || k === 'K' || k === 'b' || k === 'B' || k === '.') setPaused(!st.paused);
     else if (k === 'Escape') closeQA();
     else if (/^[0-9]$/.test(k)) {
       const slide = {'0': 10, '1': 11}[k] || +k;
@@ -590,19 +641,25 @@
     }
   });
 
-  window.addEventListener('hashchange', () => { if (location.hash !== hashFor() && fromHash()) { closeDeck(false); hideGate(); st.hold = false; render(null, false); } });
+  window.addEventListener('hashchange', () => {
+    const m = /^#ppt=(.+)$/.exec(location.hash);
+    if (m) { history.replaceState(null, '', location.pathname + location.search + hashFor()); return takePptLink(m[1]); }
+    if (location.hash !== hashFor() && fromHash()) { closeDeck(false); hideGate(); st.hold = false; render(null, false); }
+  });
   let rz; window.addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => { if (beat().center === 'overview' || beat().center === 'handphone') renderCenter(null, false); }, 150); });
 
   document.body.classList.toggle('calm', CALM);
   buildRail();
   soundButton(A.on);
+  const pptLink = /^#ppt=(.+)$/.exec(location.hash);   // read before render() rewrites the address
   fromHash();
   // Opening on slide 2 step 1: show its first frame and wait, so the presenter starts the ordering
   // animation (and the music) with →, Space, a clicker or R instead of it running on page load.
   st.hold = !CALM && scene().id === 'slide-2' && st.b === 0;
   render(null, !st.hold);
-  // PowerPoint slides: a link saved earlier on this computer, or ?ppt in the address to set one.
+  // PowerPoint slides: a link saved earlier on this computer, a one-click #ppt=<link>, or ?ppt to paste one.
   setDeck(deckSaved());
+  if (pptLink) takePptLink(pptLink[1]);
   const query = new URLSearchParams(location.search);
   if (query.has('ppt')) {
     query.delete('ppt');

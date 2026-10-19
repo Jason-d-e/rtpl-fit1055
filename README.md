@@ -33,6 +33,7 @@ The screen has three parts that always stay in sync:
 - **→**, **Space** or a clicker's next button: next step. **←**: back.
 - **2**, **5**–**9**, **0** (slide 10), **1** (slide 11): jump to a slide's scene.
 - **R**: restart the scene. **N**: presenter notes (what to point at).
+- **Pause** button, **K**, or a clicker's blank-screen button (it sends **B** or **.**): freeze the current animation and music where they are; again to resume. Any step key also resumes.
 - **M**: music and sound effects on or off. **L**: looping animations on or off. Music starts after the first key press or click.
 - The footer badge shows who is presenting; a name card slides in at each handover.
 - Buttons on the phones work too: **Accept order** and **Request human review** advance the story.
@@ -44,7 +45,7 @@ The screen has three parts that always stay in sync:
 So the whole talk runs in one browser window, the Canva slides can be shown inside the page:
 
 1. In Canva: **Share → See all → Embed → Embed**, and copy the embed link (or the HTML code).
-2. On the presenting computer, open the site with `?ppt` at the end of the address (or press **P**), paste the link and press **Save**.
+2. On the presenting computer, open the site with `?ppt` at the end of the address (or press **P**), paste the link and press **Save**. Or set it in one click: open the site address followed by `#ppt=` and the link. The part after `#` is never sent to the web server, and the page removes it from the address at once.
 
 The link is saved only in that browser (localStorage). The public site and this repository carry no link, so visitors never see the slides. Edit links are refused, because anyone who saw one could change the slides.
 

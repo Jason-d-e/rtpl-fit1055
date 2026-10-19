@@ -27,6 +27,19 @@ const url = process.argv[2] || 'file://' + path.resolve(__dirname, '..', 'index.
   assert.equal(await hash(), '#slide-2');
   assert.ok(await page.$('#hp-screen .ap-item'), 'the ordering animation has started');
 
+  // Pause (K) freezes the step where it is; K again carries on from there.
+  await page.goto(url); await page.waitForTimeout(500);
+  await step(); await page.waitForTimeout(1000);
+  await page.keyboard.press('k');
+  assert.match(await page.textContent('#hint'), /Paused/);
+  assert.equal(await page.textContent('#pause-btn'), 'Resume');
+  await page.waitForTimeout(3000);
+  assert.ok(await page.$('#hp-screen .ap-search'), 'paused: still on the app home screen');
+  await page.keyboard.press('k');
+  assert.equal(await page.textContent('#pause-btn'), 'Pause');
+  await page.waitForTimeout(2500);
+  assert.ok(await page.$('#hp-screen .ap-item'), 'resumed: the animation carried on');
+
   await page.goto(url + '#slide-5');
   assert.equal(await hash(), '#slide-5');
   // Keyboard: → walks beats, then slides.
@@ -109,6 +122,16 @@ const url = process.argv[2] || 'file://' + path.resolve(__dirname, '..', 'index.
   assert.equal(await page.isVisible('#ppt-btn'), false);
   assert.equal(await page.$('#deck-iframe'), null);
   assert.equal(await page.evaluate(() => localStorage.getItem('rtpl.deck')), null);
+  // One-click setup: #ppt=<link> saves the link and leaves the address showing the scene.
+  await page.goto('about:blank');
+  await page.goto(url + '#ppt=' + encodeURIComponent('https://www.canva.com/design/DAEXAMPLE2/xyz789/view?embed')); await page.waitForTimeout(500);
+  assert.equal(await page.isVisible('#ppt-btn'), true);
+  assert.equal(await hash(), '#slide-2');
+  await page.reload(); await page.waitForTimeout(500);
+  assert.equal(await page.isVisible('#ppt-btn'), true, 'saved on this computer');
+  assert.equal(await page.getAttribute('#deck-iframe', 'src'), 'https://www.canva.com/design/DAEXAMPLE2/xyz789/view?embed');
+  await page.keyboard.press('p'); await page.click('[data-act="deck-setup"]'); await page.click('#ds-forget');
+  assert.equal(await page.isVisible('#ppt-btn'), false);
   await page.unroute('https://www.canva.com/**');
 
   // Phone width: no horizontal scroll.
