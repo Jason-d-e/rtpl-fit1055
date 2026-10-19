@@ -2,7 +2,7 @@
 (function () {
   'use strict';
   const S = window.RTPLScenes, R = window.RTPLRender, G = window.RTPLGeo, C = window.RTPLCore;
-  const A = window.RTPLSound || {on: false, unlock() {}, toggle() { return false; }, onChange() {}, theme() {}, fx() {}};
+  const A = window.RTPLMusic || {on: false, unlock() {}, swell() {}, freeze() {}, toggle() { return false; }, onChange() {}};
   const $ = id => document.getElementById(id);
   const SCENES = S.SCENES;
   const MAIN = SCENES.filter(s => s.group === 'main');
@@ -15,7 +15,8 @@
   // deck: the PowerPoint slides shown inside the page (see "PowerPoint slides" below).
   const st = {i: 0, b: 0, live: {}, sb: {...S.SANDBOX_DEFAULT}, prev: null, raf: 0, notes: false, timers: [], looping: true, loop: 0, gate: null, hold: false,
     deck: null, deckOpen: false, deckBack: null, deckMuted: false,
-    paused: false, pauseMuted: false, pausedAnims: []};   // Pause (K): the current step's motion stops where it is
+    paused: false, pauseMuted: false, pausedAnims: [],
+    show: null, k: 0, pptOn: false, busy: false, entering: false, tl: false};   // the PPT + website sequence (see below)   // Pause (K): the current step's motion stops where it is
 
   /* ---------- navigation ---------- */
   function scene() { return SCENES[st.i]; }
@@ -24,33 +25,37 @@
   function go(i, b, animate) {
     setPaused(false);
     hideGate();
+    // Jumping to a scene from a PPT page (rail, number keys, Q&A menu): show the website at once.
+    if (st.pptOn && !st.entering) { st.pptOn = false; pvHideNow(); }
     // Leaving the opening hold plays the full scene entrance, as a fresh page load used to.
     const prev = st.hold ? null : {scene: scene(), beat: beat(), i: st.i, b: st.b};
     if (st.hold) { st.hold = false; A.unlock(); }
     st.i = Math.max(0, Math.min(SCENES.length - 1, i));
     st.b = Math.max(0, Math.min(scene().beats.length - 1, b));
     st.live = {};
+    const k = st.show.indexOf('w:' + scene().id);
+    if (k >= 0) st.k = k;
     render(prev, !!animate);
   }
+  // → walks the steps of a website scene, then moves to the next item of the sequence (a PPT page or a scene).
   function next() {
     const s = scene();
     setPaused(false);
+    if (st.busy) { st.queued = 'next'; return; }
     if (st.hold) return go(st.i, 0, true);
     if (st.gate) return st.deck && st.gate.pptOnly.length ? openDeck('gate') : gateGo();
-    if (st.b < s.beats.length - 1) return go(st.i, st.b + 1, true);
-    const m = MAIN.indexOf(s);
-    if (m < 0) return;
-    const to = MAIN[m + 1] || null;
-    // A new presenter, or PPT slides in between that only exist in PowerPoint: stop at a handover card first.
-    if (!to || to.presenter !== s.presenter || to.slide !== s.slide + 1) return showGate(s, to);
-    go(SCENES.indexOf(to), 0, true);
+    if (!st.pptOn && st.b < s.beats.length - 1) return go(st.i, st.b + 1, true);
+    const k = curK();
+    if (k >= 0 && k < st.show.length - 1) toItem(k + 1, 'first');
   }
+  // ← goes back a step, or quickly to the previous item.
   function back() {
     setPaused(false);
+    if (st.busy) { st.queued = 'back'; return; }
     if (st.gate) { hideGate(); renderChrome(); scheduleLoop(); return; }
-    if (st.b > 0) return go(st.i, st.b - 1, false);
-    const m = MAIN.indexOf(scene());
-    if (m > 0) { const p = SCENES.indexOf(MAIN[m - 1]); go(p, SCENES[p].beats.length - 1, false); }
+    if (!st.pptOn && st.b > 0) return go(st.i, st.b - 1, false);
+    const k = curK();
+    if (k > 0) toItem(k - 1, 'last', true);
   }
 
   /* ---------- handover card between presenters / back to PowerPoint ---------- */
@@ -61,7 +66,6 @@
     clearTimeout(st.loop); clearTimers(); cancelAnimationFrame(st.raf);
     renderGate();
     $('gate').hidden = false;
-    A.fx('ping');
     renderChrome();
   }
   function renderGate() { if (st.gate) $('gate').innerHTML = R.gate(st.gate.from, st.gate.to, st.gate.pptOnly, !!st.deck); }
@@ -151,10 +155,13 @@
     else $('ds-msg').textContent = 'Linked for this visit only: this browser does not allow saving it.';
   });
 
-  function hashFor() { return '#' + scene().id + (st.b ? '/' + (st.b + 1) : ''); }
+  function hashFor() { return st.pptOn ? '#ppt-' + pageOf(st.show[st.k]) : '#' + scene().id + (st.b ? '/' + (st.b + 1) : ''); }
   function fromHash() {
+    const pg = /^#ppt-(\d+)$/.exec(location.hash || '');
+    if (pg && st.show.includes('p' + pg[1])) { st.pptOn = true; st.k = st.show.indexOf('p' + pg[1]); return true; }
     const m = /^#([a-z0-9-]+)(?:\/(\d+))?$/.exec(location.hash || '');
     if (!m) return false;
+    st.pptOn = false;
     // Old Case Lab links (#01–#07) still land on the matching scene.
     const OLD = {'01': 'slide-6', '02': 'slide-8', '03': 'slide-9', '04': 'slide-9', '05': 'qa-05', '06': 'qa-06', '07': 'qa-07'};
     const id = OLD[m[1]] || m[1];
@@ -186,15 +193,14 @@
     $('caption').textContent = cap;
     $('result').innerHTML = res ? `<span class="result">${R.esc(res)}</span>` : '';
     $('dots').innerHTML = s.beats.length > 1 ? s.beats.map((_, k) => `<button type="button" class="${k <= st.b ? 'on' : ''}" data-beat="${k}" aria-label="Step ${k + 1} of ${s.beats.length}"></button>`).join('') : '';
-    const m = MAIN.indexOf(s), last = st.b === s.beats.length - 1, to = m >= 0 ? MAIN[m + 1] || null : null;
-    const handover = last && m >= 0 && (!to || to.presenter !== s.presenter || to.slide !== s.slide + 1);
-    $('hint').textContent = st.hold ? 'Press → to start' : st.paused ? 'Paused · K or Resume to continue' : !last ? `Step ${st.b + 1} of ${s.beats.length}` : handover ? 'Last step · → shows the handover card' : to ? `Last step · → goes to PPT slide ${to.slide}` : '';
-    const toSlides = st.gate && st.deck && st.gate.pptOnly.length;   // → on this card opens the slides
-    $('next').disabled = (last && m < 0) || (st.gate && !st.gate.to && !toSlides);
-    $('next').textContent = st.hold ? 'Start →' : toSlides ? 'Show slides →' : st.gate ? (st.gate.to ? `Start slide ${st.gate.to.slide} →` : 'Done') : handover ? 'Handover →' : 'Next →';
-    $('notes').innerHTML = `<b>${s.slide ? 'Slide ' + s.slide + ' · ' + R.esc(s.presenter) : 'Q&A extra'}</b>${R.esc(b.note || '')}<br><small>Keys: <kbd>→</kbd>/<kbd>Space</kbd> next · <kbd>←</kbd> back · <kbd>R</kbd> restart scene · <kbd>N</kbd> notes · <kbd>K</kbd> pause · <kbd>M</kbd> sound · <kbd>L</kbd> loop · <kbd>P</kbd> PPT slides · <kbd>2</kbd>, <kbd>5</kbd>–<kbd>9</kbd>, <kbd>0</kbd>=10, <kbd>1</kbd>=11 jump</small>`;
+    const last = st.b === s.beats.length - 1, nl = nextLabel();
+    $('hint').textContent = st.paused ? 'Paused · K or Resume to continue' : !last ? `Step ${st.b + 1} of ${s.beats.length}` : nl ? `Last step · → ${nl}` : '';
+    $('next').disabled = last && !nl;
+    $('next').textContent = last && nl && nl.startsWith('PPT') ? 'PPT →' : 'Next →';
+    $('notes').innerHTML = `<b>${s.slide ? 'Slide ' + s.slide + ' · ' + R.esc(s.presenter) : 'Q&A extra'}</b>${R.esc(b.note || '')}<br><small>Keys: <kbd>→</kbd>/<kbd>Space</kbd> next · <kbd>←</kbd> back · <kbd>R</kbd> restart scene · <kbd>N</kbd> notes · <kbd>K</kbd> pause · <kbd>M</kbd> sound · <kbd>L</kbd> loop · <kbd>T</kbd> timeline · <kbd>2</kbd>, <kbd>5</kbd>–<kbd>9</kbd>, <kbd>0</kbd>=10, <kbd>1</kbd>=11 jump</small>`;
     $('notes').hidden = !st.notes;
     if (location.hash !== hashFor()) history.replaceState(null, '', hashFor());
+    if (st.tl) renderTimeline();
   }
 
   /* ---------- phones ---------- */
@@ -307,7 +313,6 @@
       p.style.transform = kf[animate ? 0 : 1].transform; if (!animate && fade) p.style.opacity = 0;
       if (animate) p.animate(kf, {duration: dur, delay, easing: 'cubic-bezier(.5,0,.3,1)', fill: 'both'});
     };
-    if (animate) { A.fx('whoosh', 150); A.fx('ping', 1400); }
     fly(mk(S.clock(S.AI_PROPOSED)), [ai.cx, ai.cy], [g.l + 40, ai.cy], 100, 1100, true);
     const out = S.clock(S.results.CHECK01.deadline);
     fly(mk(out, true), [g.r - 30, rd.cy], [(g.r + rd.l) / 2, rd.cy], 1300, 900, false);
@@ -346,7 +351,7 @@
     const tap = sel => {
       const t = scr.querySelector(sel); if (!t) return;
       const [x, y] = local(t);
-      finger.classList.add('press'); later(150, () => finger.classList.remove('press')); A.fx('tap');
+      finger.classList.add('press'); later(150, () => finger.classList.remove('press'));
       t.classList.add('tapped');
       const rip = document.createElement('span'); rip.className = 'hp-ripple'; rip.style.left = x + 'px'; rip.style.top = y + 'px';
       dev.appendChild(rip); later(650, () => rip.remove());
@@ -362,7 +367,7 @@
     if (!animate || reduced()) return;
 
     if (h.script === 'status') {
-      [1, 2, 3, 4].forEach((n, i) => later(i * 1300, () => { show('status', n); A.fx(n === 4 ? 'success' : 'ping'); }));
+      [1, 2, 3, 4].forEach((n, i) => later(i * 1300, () => show('status', n)));
       return;
     }
     if (h.stage === 0) {
@@ -375,7 +380,7 @@
         [5050, () => point('[data-tap="add-tea"]')], [5700, () => tap('[data-tap="add-tea"]')], [5800, () => show('menu', {soup: 2, tea: 1})],
         [6300, () => point('[data-tap="cart"]')], [6950, () => tap('[data-tap="cart"]')], [7150, () => show('checkout')],
         [7750, () => { guide(3); point('[data-tap="pay"]'); }], [8400, () => tap('[data-tap="pay"]')], [8550, () => show('paying')],
-        [8800, () => park()], [9600, () => { guide(4); show('paid'); A.fx('chime'); }]
+        [8800, () => park()], [9600, () => { guide(4); show('paid'); }]
       ];
       steps.forEach(([ms, fn]) => later(ms, fn));
       return;
@@ -391,7 +396,6 @@
       hp.classList.add('fly');
       hp.style.setProperty('--ai-delay', fromCentre ? '2.1s' : '1.4s');
       later(fromCentre ? 1000 : 300, () => {
-        A.fx('whoosh');
         const src = scr.querySelector('#ap-ticket'), dst = $('be-ticket');
         if (!src || !dst) return;
         const box = hp.getBoundingClientRect(), a = src.getBoundingClientRect(), b = dst.getBoundingClientRect();
@@ -399,10 +403,189 @@
         hp.appendChild(fly);
         const kf = [{left: a.left - box.left + 'px', top: a.top - box.top + 'px', width: a.width + 'px', opacity: 1},
                     {left: b.left - box.left + 'px', top: b.top - box.top + 'px', width: b.width + 'px', opacity: 1}];
-        fly.animate(kf, {duration: 900, easing: 'cubic-bezier(.5,0,.3,1)', fill: 'both'}).onfinish = () => { dst.classList.add('landed'); fly.remove(); A.fx('ping', 250); };
+        fly.animate(kf, {duration: 900, easing: 'cubic-bezier(.5,0,.3,1)', fill: 'both'}).onfinish = () => { dst.classList.add('landed'); fly.remove(); };
       });
     }
   }
+
+  /* ---------- the talk as one sequence: PPT pages and website scenes, with keynote-style transitions ---------- */
+  // st.show lists the items in playing order ('p3' = PPT page 3, 'w:slide-6' = website scene). The timeline (T)
+  // lets the team drag items into another order; that order is kept in this browser only.
+  const SHOW_KEY = 'rtpl.show';
+  const pad2 = n => String(n).padStart(2, '0');
+  const slideSrc = n => `./assets/slides/${pad2(n)}.webp`;
+  function loadShow() {
+    try {
+      const v = JSON.parse(localStorage.getItem(SHOW_KEY) || 'null');
+      const same = Array.isArray(v) && v.length === S.SHOW_DEFAULT.length && [...v].sort().join() === [...S.SHOW_DEFAULT].sort().join();
+      if (same) return v;
+    } catch (e) { /* storage blocked or bad data: use the default */ }
+    return [...S.SHOW_DEFAULT];
+  }
+  function saveShow() { try { localStorage.setItem(SHOW_KEY, JSON.stringify(st.show)); } catch (e) { /* this visit only */ } }
+  const sceneOf = it => SCENES.find(s => s.id === it.slice(2));
+  function curK() { return st.pptOn ? st.k : st.show.indexOf('w:' + scene().id); }
+  const pageOf = it => +it.slice(1);
+
+  const ease = 'cubic-bezier(.65, 0, .25, 1)';
+  const anim = (el, kf, ms, delay) => el.animate(kf, {duration: ms, delay: delay || 0, easing: ease, fill: 'both'});
+  // State changes run on timers, not on animation 'finish' events: those never fire while the window is not drawn.
+  const after = (ms, fn) => setTimeout(fn, ms);
+  const settle = el => el.getAnimations().forEach(a => a.cancel());
+  // A press during a transition is kept and carried out as soon as the transition ends.
+  function free() { st.busy = false; const q = st.queued; st.queued = null; if (q === 'next') next(); else if (q === 'back') back(); }
+  let pvFront = 'pv-a';
+  function pvImg(n) {
+    const back = $(pvFront === 'pv-a' ? 'pv-b' : 'pv-a');
+    back.src = slideSrc(n); back.alt = 'PPT slide ' + n;
+    $('pv-n').textContent = `PPT ${n} / ${S.PPT_TOTAL}`;
+    return back;
+  }
+  function pvShowNow(n) {
+    const img = pvImg(n), other = $(pvFront);
+    img.getAnimations().forEach(a => a.cancel()); other.getAnimations().forEach(a => a.cancel());
+    img.style.opacity = 1; other.style.opacity = 0; pvFront = img.id;
+    $('pv').hidden = false; $('site').classList.add('away');
+  }
+  function pvHideNow() { $('pv').hidden = true; $('site').classList.remove('away'); $('site').getAnimations().forEach(a => a.cancel()); }
+  function setHash() { if (location.hash !== hashFor()) history.replaceState(null, '', hashFor()); }
+  // Wait for the page image, but never more than 0.8 s (a slow disk or network must not stop the talk).
+  const ready = img => Promise.race([img.decode ? img.decode().catch(() => {}) : Promise.resolve(), new Promise(r => setTimeout(r, 800))]);
+
+  // PPT page → PPT page: a slow dissolve with a slight push in.
+  function pptToPpt(n, quick) {
+    const img = pvImg(n), old = $(pvFront);
+    st.busy = true;
+    ready(img).then(() => {
+      const ms = quick ? 260 : 1100;
+      anim(old, [{opacity: 1, transform: 'scale(1)', filter: 'blur(0)'}, {opacity: 0, transform: 'scale(.985)', filter: 'blur(4px)'}], ms);
+      anim(img, [{opacity: 0, transform: 'scale(1.035)', filter: 'blur(10px)'}, {opacity: 1, transform: 'scale(1)', filter: 'blur(0)'}], ms);
+      pvFront = img.id;
+      after(ms, () => { img.style.opacity = 1; old.style.opacity = 0; settle(img); settle(old); free(); });
+      if (!quick) A.swell(400);
+    });
+    setHash();
+  }
+  // Website → PPT page: the website sinks back and blurs away, the page comes forward.
+  function webToPpt(n, quick) {
+    st.busy = true;
+    clearTimeout(st.loop); clearTimers(); cancelAnimationFrame(st.raf);
+    const img = pvImg(n), other = $(pvFront);
+    other.style.opacity = 0;
+    st.pptOn = true;
+    ready(img).then(() => {
+      const ms = quick ? 280 : 1300;
+      $('pv').hidden = false;
+      anim($('site'), [{opacity: 1, transform: 'scale(1)', filter: 'blur(0)'}, {opacity: 0, transform: 'scale(.9)', filter: 'blur(14px)'}], ms * .8);
+      anim($('pv'), [{opacity: 0}, {opacity: 1}], ms * .7, ms * .15);
+      anim(img, [{opacity: 0, transform: 'scale(1.08)', filter: 'blur(12px)'}, {opacity: 1, transform: 'scale(1)', filter: 'blur(0)'}], ms, ms * .25);
+      pvFront = img.id;
+      after(ms * 1.25, () => { img.style.opacity = 1; settle(img); settle($('pv')); settle($('site')); $('site').classList.add('away'); free(); });
+      if (!quick) A.swell(900);
+    });
+    setHash();
+  }
+  // PPT page → website: the page opens up and blurs away, a LIVE card names what comes next, and the website
+  // grows into place. This is the clear "switch from slides to demo" the tutor asked for.
+  function pptToWeb(i, b, quick) {
+    st.busy = true;
+    const img = $(pvFront), sc = SCENES[i], live = $('live');
+    const ms = quick ? 300 : 2000;
+    if (!quick) {
+      live.innerHTML = `<b><i></i>LIVE PROTOTYPE</b><span>PPT slide ${sc.slide} on the website · ${R.esc(sc.short)}</span>`;
+      live.hidden = false;
+      anim(live, [{opacity: 0, transform: 'translate(-50%, -50%) scale(.9)'}, {opacity: 1, transform: 'translate(-50%, -50%) scale(1)', offset: .3},
+        {opacity: 1, transform: 'translate(-50%, -50%) scale(1)', offset: .75}, {opacity: 0, transform: 'translate(-50%, -50%) scale(1.06)'}], ms * 1.1);
+      after(ms * 1.1, () => { live.hidden = true; settle(live); });
+      A.swell(1500);
+    }
+    anim(img, [{transform: 'scale(1)', filter: 'blur(0)', opacity: 1}, {transform: 'scale(1.18)', filter: 'blur(16px)', opacity: 0}], ms * .7);
+    setTimeout(() => {
+      // Draw the scene now, so its own animation starts as it comes into view.
+      st.pptOn = false; st.entering = true;
+      $('site').classList.remove('away');
+      go(i, b, true);
+      st.entering = false;
+      anim($('site'), [{opacity: 0, transform: 'scale(.94)', filter: 'blur(12px)'}, {opacity: 1, transform: 'scale(1)', filter: 'blur(0)'}], ms * .6);
+      anim($('pv'), [{opacity: 1}, {opacity: 0}], ms * .35);
+      after(ms * .35, () => { $('pv').hidden = true; settle($('pv')); settle(img); });
+      after(ms * .6, () => { settle($('site')); free(); });
+    }, ms * .4);
+  }
+  // Move to item k of the show. where: 'first' (going forward) or 'last' step of a scene (going back).
+  function toItem(k, where, quick) {
+    const it = st.show[k];
+    if (!it) return;
+    st.k = k;
+    if (it[0] === 'p') return st.pptOn ? pptToPpt(pageOf(it), quick) : webToPpt(pageOf(it), quick);
+    const i = SCENES.indexOf(sceneOf(it)), b = where === 'last' ? SCENES[i].beats.length - 1 : 0;
+    if (st.pptOn) return pptToWeb(i, b, quick);
+    go(i, b, where !== 'last');
+  }
+  function nextLabel() {
+    const k = curK(), nx = k >= 0 ? st.show[k + 1] : null;
+    if (!nx) return null;
+    return nx[0] === 'p' ? 'PPT slide ' + pageOf(nx) : 'website, slide ' + sceneOf(nx).slide;
+  }
+
+  /* ---------- timeline: the order of the talk, PPT pages on top, website scenes below; drag to reorder ---------- */
+  function openTimeline(v) {
+    st.tl = v;
+    $('tl').hidden = !v;
+    if (v) { renderTimeline(); const now = $('tl').querySelector('.tl-col.now'); if (now) now.scrollIntoView({inline: 'center', block: 'nearest'}); }
+  }
+  function renderTimeline() {
+    const cur = curK();
+    $('tl-axis').innerHTML = st.show.map((it, k) => {
+      const isP = it[0] === 'p';
+      let card;
+      if (isP) {
+        const n = pageOf(it);
+        card = `<div class="tl-card p" data-k="${k}" title="PPT slide ${n} · ${R.esc(S.PPT_OWNER[n] || '')}"><img src="./assets/slides/thumb/${pad2(n)}.webp" alt="" draggable="false"><span>PPT ${n}</span></div>`;
+      } else {
+        const sc = sceneOf(it);
+        card = `<div class="tl-card w" data-k="${k}" title="Website scene for slide ${sc.slide}"><em>WEB</em><b>${sc.slide}</b><span>${R.esc(sc.short)}</span><small>${sc.beats.length} steps · ${R.esc(String(sc.presenter).split(' ')[0])}</small></div>`;
+      }
+      return `<div class="tl-col${k === cur ? ' now' : ''}" data-k="${k}"><div class="tl-lane">${isP ? card : ''}</div><div class="tl-tick"><i></i><span>${k + 1}</span></div><div class="tl-lane">${isP ? '' : card}</div></div>`;
+    }).join('');
+    // The tutor marks against the submitted PowerPoint, so warn when its pages are out of order.
+    const pages = st.show.filter(x => x[0] === 'p').map(pageOf);
+    const inOrder = pages.every((n, j) => j === 0 || n > pages[j - 1]);
+    $('tl-warn').textContent = inOrder ? '' : 'PPT pages are not in the submitted order';
+    $('tl-same').hidden = st.show.join() === S.SHOW_DEFAULT.join();
+  }
+  // Pointer drag: a card follows the pointer along the axis and drops between two columns.
+  let drag = null;
+  document.addEventListener('pointerdown', e => {
+    const card = e.target.closest && e.target.closest('.tl-card');
+    if (!card || e.button !== 0) return;
+    drag = {card, k: +card.dataset.k, x0: e.clientX, moved: false, to: +card.dataset.k};
+    card.setPointerCapture(e.pointerId);
+  });
+  document.addEventListener('pointermove', e => {
+    if (!drag) return;
+    const dx = e.clientX - drag.x0;
+    if (!drag.moved && Math.abs(dx) < 6) return;
+    drag.moved = true;
+    drag.card.classList.add('dragging');
+    drag.card.style.transform = `translateX(${dx}px)`;
+    const cols = [...$('tl-axis').children];
+    let to = cols.length;
+    for (let j = 0; j < cols.length; j++) { const r = cols[j].getBoundingClientRect(); if (e.clientX < r.left + r.width / 2) { to = j; break; } }
+    drag.to = to;
+    cols.forEach((c, j) => c.classList.toggle('drop', j === to && j !== drag.k && j !== drag.k + 1));
+    $('tl-axis').classList.toggle('drop-end', to === cols.length && drag.k !== cols.length - 1);
+  });
+  document.addEventListener('pointerup', () => {
+    if (!drag) return;
+    const d = drag; drag = null;
+    if (!d.moved) { openTimeline(false); return toItem(d.k, 'first', true); }
+    const curId = st.pptOn ? st.show[st.k] : null;
+    const item = st.show.splice(d.k, 1)[0];
+    st.show.splice(d.to > d.k ? d.to - 1 : d.to, 0, item);
+    if (curId) st.k = st.show.indexOf(curId);
+    saveShow(); renderTimeline(); renderChrome();
+  });
 
   /* ---------- sandbox ---------- */
   function sandboxCompute() {
@@ -422,7 +605,7 @@
   function scheduleLoop() {
     clearTimeout(st.loop);
     const ms = cycleFor(beat());
-    if (st.looping && ms && !reduced() && !st.gate && !st.hold && !st.paused) st.loop = setTimeout(replay, ms);
+    if (st.looping && ms && !reduced() && !st.gate && !st.hold && !st.paused && !st.pptOn) st.loop = setTimeout(replay, ms);
   }
   function restartCss(el) {
     if (!el || !el.getAnimations) return;
@@ -438,7 +621,6 @@
     if (b.center === 'review') restartCss($('center'));
     else renderCenter(b.center === 'handphone' && b.hand.stage === 1 ? null : prevBeat, true);
     restartCss($('left')); restartCss($('right'));
-    cue(b);
     scheduleLoop();
   }
   /* ---------- pause: freeze the current step (motion, step timers, replays, music) until resumed ---------- */
@@ -454,14 +636,14 @@
       // CSS animations, transitions and scripted animations that are still running; finished ones stay as they are.
       st.pausedAnims = document.getAnimations().filter(a => a.playState === 'running');
       st.pausedAnims.forEach(a => a.pause());
-      if (A.on && !st.hold) { A.toggle(); st.pauseMuted = true; }
+      A.freeze(true);
     } else {
       pausedFor += performance.now() - pausedAt;
       st.paused = false;
       st.pausedAnims.forEach(a => { if (a.playState === 'paused') a.play(); });
       st.pausedAnims = [];
       st.timers.forEach(t => t.arm());
-      if (st.pauseMuted) { st.pauseMuted = false; A.toggle(); }
+      A.freeze(false);
       scheduleLoop();
     }
     const btn = $('pause-btn');
@@ -473,12 +655,8 @@
     scheduleLoop();
   }
 
-  /* ---------- sound and the presenter name card ---------- */
-  function cue(b) {
-    A.theme(b.theme);
-    if (b.sfx) A.fx(b.sfx, b.sfxAt);
-  }
-  function soundButton(on) { const el = $('sound-btn'); el.setAttribute('aria-pressed', on); el.classList.toggle('off', !on); el.title = on ? 'Sound on (M to mute)' : 'Sound off (M to turn on)'; }
+  /* ---------- music and the presenter name card ---------- */
+  function soundButton(on) { const el = $('sound-btn'); el.setAttribute('aria-pressed', on); el.classList.toggle('off', !on); el.title = on ? 'Music on (M to mute)' : 'Music off (M to turn on)'; }
   A.onChange(soundButton);
   // While the opening holds, a stray click (for example to focus the window) stays silent; go() unlocks on start.
   ['keydown', 'pointerdown'].forEach(t => document.addEventListener(t, () => { if (!st.hold) A.unlock(); }, {once: false, passive: true}));
@@ -525,9 +703,8 @@
     renderPhones(newScene);
     renderCenter(prev, animate);
     if (newScene && animate) { const h = $('title'); h.classList.remove('in'); void h.offsetWidth; h.classList.add('in'); }
-    if (newScene && scene().slide) pptFlash(scene(), animate);
+    if (newScene && scene().slide && !st.entering) pptFlash(scene(), animate);
     if (!prev || prev.scene.presenter !== scene().presenter) nameCard(scene(), animate);
-    if (animate) cue(beat()); else A.theme(beat().theme);
     scheduleLoop();
   }
 
@@ -566,9 +743,10 @@
   }
 
   document.addEventListener('click', e => {
-    const t = e.target.closest('[data-go],[data-beat],[data-act],#next,#prev,#restart,#notes-btn,#qa-btn,#sound-btn,#loop-btn,#ppt-btn,#pause-btn');
+    const t = e.target.closest('[data-go],[data-beat],[data-act],#next,#prev,#restart,#notes-btn,#qa-btn,#sound-btn,#loop-btn,#ppt-btn,#pause-btn,#tl-btn');
     if (!t) { if (!e.target.closest('#qa')) closeQA(); return; }
     if (t.id === 'pause-btn') return setPaused(!st.paused);
+    if (t.id === 'tl-btn') return openTimeline(!st.tl);
     if (t.id === 'ppt-btn') return st.deckOpen ? closeDeck(false) : openDeck('bar');
     if (t.id === 'sound-btn') return A.toggle();
     if (t.id === 'loop-btn') return setLooping(!st.looping);
@@ -580,6 +758,9 @@
     if (t.dataset.go) { closeQA(); const i = SCENES.findIndex(s => s.id === t.dataset.go); return go(i, 0, true); }
     if (t.dataset.beat) return go(st.i, +t.dataset.beat, +t.dataset.beat === st.b + 1);
     const act = t.dataset.act;
+    if (act === 'tl-open') return openTimeline(true);
+    if (act === 'tl-close') return openTimeline(false);
+    if (act === 'tl-reset') { st.show = [...S.SHOW_DEFAULT]; saveShow(); st.k = Math.max(0, curK()); return renderTimeline(); }
     if (act === 'gate-go') return gateGo();
     if (act === 'gate-stay') return back();
     if (act === 'gate-ppt') return openDeck('gate');
@@ -614,6 +795,8 @@
     if (e.metaKey || e.ctrlKey || e.altKey) return;
     const k = e.key;
     const step = k === 'ArrowRight' || k === 'PageDown' || k === ' ' || k === 'ArrowLeft' || k === 'PageUp';
+    if (k === 't' || k === 'T') return openTimeline(!st.tl);
+    if (k === 'Escape' && st.tl) return openTimeline(false);
     if (k === 'p' || k === 'P') return st.deck ? (st.deckOpen ? closeDeck(false) : openDeck(st.gate ? 'gate' : 'bar')) : openSetup();
     // Slides showing but the page has the keyboard (a button was clicked): hand the keys back to the slides.
     if (st.deckOpen) { if (step) { e.preventDefault(); const f = $('deck-iframe'); if (f) f.focus(); } return; }
@@ -644,7 +827,10 @@
   window.addEventListener('hashchange', () => {
     const m = /^#ppt=(.+)$/.exec(location.hash);
     if (m) { history.replaceState(null, '', location.pathname + location.search + hashFor()); return takePptLink(m[1]); }
-    if (location.hash !== hashFor() && fromHash()) { closeDeck(false); hideGate(); st.hold = false; render(null, false); }
+    if (location.hash !== hashFor() && fromHash()) {
+      closeDeck(false); hideGate(); st.hold = false;
+      if (st.pptOn) { clearTimeout(st.loop); pvShowNow(pageOf(st.show[st.k])); } else { pvHideNow(); render(null, false); }
+    }
   });
   let rz; window.addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => { if (beat().center === 'overview' || beat().center === 'handphone') renderCenter(null, false); }, 150); });
 
@@ -652,11 +838,16 @@
   buildRail();
   soundButton(A.on);
   const pptLink = /^#ppt=(.+)$/.exec(location.hash);   // read before render() rewrites the address
-  fromHash();
-  // Opening on slide 2 step 1: show its first frame and wait, so the presenter starts the ordering
-  // animation (and the music) with →, Space, a clicker or R instead of it running on page load.
-  st.hold = !CALM && scene().id === 'slide-2' && st.b === 0;
-  render(null, !st.hold);
+  st.show = loadShow();
+  // Opens on the first item, the cover page; a link to a page (#ppt-6) or a scene (#slide-6/2) still works.
+  if (!fromHash()) { st.pptOn = st.show[0][0] === 'p'; st.k = 0; if (!st.pptOn) st.i = SCENES.indexOf(sceneOf(st.show[0])); }
+  st.hold = false;
+  if (st.pptOn) {
+    // The website is drawn underneath (still), ready for the first switch.
+    const w = st.show.find(x => x[0] === 'w'); st.i = SCENES.indexOf(sceneOf(w)); st.b = 0;
+    render(null, false); clearTimeout(st.loop);
+    pvShowNow(pageOf(st.show[st.k])); setHash();
+  } else render(null, true);
   // PowerPoint slides: a link saved earlier on this computer, a one-click #ppt=<link>, or ?ppt to paste one.
   setDeck(deckSaved());
   if (pptLink) takePptLink(pptLink[1]);

@@ -32,12 +32,7 @@ test('Slide 2 and 6: 12:24 leaves 2 minutes to ride 4 km, which needs 120 km/h a
   assert.ok(R.speedo(beat('slide-6', 0).map.speedo).includes('120 km/h'));
 });
 
-test('Two pieces of music: Liyuan’s opening has its own theme, everyone else shares one', () => {
-  const fx = ['tap', 'ping', 'chime', 'success', 'alert', 'flip', 'whoosh', 'type', null];
-  for (const s of S.SCENES) for (const b of s.beats) {
-    assert.equal(b.theme, s.presenter === 'Liyuan Liang' ? 'opening' : 'main', s.id);
-    assert.ok(fx.includes(b.sfx), s.id + ' ' + b.sfx);
-  }
+test('Every presenter with a name card has a website scene', () => {
   for (const p of Object.keys(S.SECTIONS)) assert.ok(S.SCENES.some(s => s.presenter === p), p);
 });
 

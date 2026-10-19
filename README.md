@@ -29,18 +29,20 @@ The screen has three parts that always stay in sync:
 
 ## Presenting
 
-- The page opens on slide 2 and waits on its first frame: the first **→** (or **R**) starts the ordering animation and the music.
+- The whole talk runs in this page. It opens on PPT page 1 (the cover). **→** plays the talk in order: each PPT page, and right after a page that has a website scene (2, 5–11), that scene step by step. Going from a PPT page to the website shows a **LIVE PROTOTYPE** card, so the switch from slides to the live demo is clear. After the last step of a scene, **→** goes to the next PPT page.
+- The PPT pages are images exported from the team's Canva deck (`assets/slides/`), so they match the submitted PowerPoint exactly. Every page has its own link, for example `#ppt-6`.
+- **Timeline** button or **T**: the order of the talk on one axis, PPT pages on the top track and website scenes on the bottom track. Drag a card to change the order (kept in this browser only), click a card to go there, **Back to the PPT order** to reset. It warns if the PPT pages are out of the submitted order.
 - **→**, **Space** or a clicker's next button: next step. **←**: back.
 - **2**, **5**–**9**, **0** (slide 10), **1** (slide 11): jump to a slide's scene.
 - **R**: restart the scene. **N**: presenter notes (what to point at).
 - **Pause** button, **K**, or a clicker's blank-screen button (it sends **B** or **.**): freeze the current animation and music where they are; again to resume. Any step key also resumes.
-- **M**: music and sound effects on or off. **L**: looping animations on or off. Music starts after the first key press or click.
+- **M**: music on or off. The music swells during each transition and fades out while someone speaks. It starts after the first key press or click. **L**: looping animations on or off.
 - The footer badge shows who is presenting; a name card slides in at each handover.
 - Buttons on the phones work too: **Accept order** and **Request human review** advance the story.
 - Every step has its own link, for example `#slide-7/2`. Old Case Lab links `#01`–`#07` open the matching scene.
 - The page works offline and from `file://`. Map, fonts, rules and data are all local.
 
-### PowerPoint slides inside the page (presenting computer only)
+### Canva slides inside the page (older option, not needed for the talk)
 
 So the whole talk runs in one browser window, the Canva slides can be shown inside the page:
 
@@ -67,7 +69,8 @@ Once saved, a **PPT** button appears (key **P**). The handover cards before Powe
 | `app/scenes.js` | Fixed synthetic inputs and every scene/step. All displayed numbers are computed here by `rtpl-core.js`. |
 | `app/geo.js` | The synthetic city: streets, places and route paths. |
 | `app/render.js` | Pure HTML renderers for the phones, map, console and boards. No policy logic. |
-| `app/sound.js` | Music (an opening theme and a main theme) and sound effects, synthesised with the Web Audio API. No audio files. |
+| `app/music.js` | Transition music: one CC BY track (`assets/music/higher-up.mp3`) that swells during transitions. |
+| `assets/slides/` | The 15 PPT pages as WebP images (and small thumbnails for the timeline), exported from the Canva deck. |
 | `app/main.js` | Presenter controller: keyboard, links, animation loops, reviewer desk, download, Sandbox. |
 | `assets/` | Stylesheet and the two local fonts (Bricolage Grotesque, JetBrains Mono; SIL Open Font Licence). |
 | `test/` | Core rule tests, presentation-contract tests and scene/privacy tests. |
@@ -85,4 +88,4 @@ The browser check needs Playwright: `npm i -D playwright`, then `npm run test:br
 
 ## Credits
 
-The two hands on the phone (slides 2 and 5) come from "Dotted background with hands using a mobile phone", [designed by Freepik](https://www.freepik.com/free-vector/dotted-background-with-hands-using-mobile-phone_1072215.htm), used under Freepik's free licence with attribution (credited in the label beside the hands). The shapes are unchanged; `app/render.js` splits the left hand into the parts behind and in front of the phone. Fonts: Bricolage Grotesque and JetBrains Mono (SIL Open Font Licence).
+The two hands on the phone (slides 2 and 5) come from "Dotted background with hands using a mobile phone", [designed by Freepik](https://www.freepik.com/free-vector/dotted-background-with-hands-using-mobile-phone_1072215.htm), used under Freepik's free licence with attribution (credited in the label beside the hands). The shapes are unchanged; `app/render.js` splits the left hand into the parts behind and in front of the phone. Fonts: Bricolage Grotesque and JetBrains Mono (SIL Open Font Licence). Music: "Higher Up" by Shane Ivers (https://www.silvermansound.com), licensed under CC BY 4.0. Photos on the PPT pages: Wikimedia Commons, credited in the PPT notes.

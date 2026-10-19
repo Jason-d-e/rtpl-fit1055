@@ -8,13 +8,15 @@
 <link rel="stylesheet" href="./assets/app.css">
 </head>
 <body>
+<div class="site" id="site">
 <header class="bar">
   <a class="brand" href="#slide-2" aria-label="RTPL home"><b>RTPL</b><span>Rider Time Protection Layer</span></a>
   <nav class="rail" id="rail" aria-label="Demo scenes by slide"></nav>
   <div class="qa" id="qa"><button type="button" id="qa-btn" aria-expanded="false" aria-controls="qa-menu">Q&amp;A extras</button>
     <div class="qa-menu" id="qa-menu"><p>For questions. These are not part of the 8-minute route.</p></div></div>
   <div class="ctl">
-    <button type="button" class="opt icon" id="sound-btn" aria-pressed="true" aria-label="Music and sound" title="Music and sound effects (M)">♪</button>
+    <button type="button" class="opt" id="tl-btn" title="The order of the talk: PPT pages and website scenes (T)">Timeline</button>
+    <button type="button" class="opt icon" id="sound-btn" aria-pressed="true" aria-label="Music" title="Music (M)">♪</button>
     <button type="button" class="opt icon" id="loop-btn" aria-pressed="true" aria-label="Loop animations" title="Replay each animation (L)">⟳</button>
     <button type="button" class="opt" id="ppt-btn" hidden title="Show the PowerPoint slides (P)">PPT</button>
     <button type="button" class="opt" id="notes-btn" aria-pressed="false" title="Presenter notes (N)">Notes</button>
@@ -50,10 +52,28 @@
   <span class="sp"></span>
   <span>Rules run live from <a href="./rtpl-core.js">rtpl-core.js</a></span>
   <a href="https://github.com/Jason-d-e/rtpl-fit1055">Source</a>
+  <a href="https://www.silvermansound.com/free-music/higher-up" title="Music: Higher Up by Shane Ivers, CC BY 4.0">Music: Shane Ivers (CC BY)</a>
   <span>FIT1055 A2b · T1 Mixue Bingcheng</span>
 </footer>
 
 <aside class="notes" id="notes" hidden></aside>
+</div>
+
+<!-- The PPT pages (exported from the team's Canva deck) shown full screen between the website scenes. -->
+<div class="pv" id="pv" hidden>
+  <img class="pv-img" id="pv-a" alt=""><img class="pv-img" id="pv-b" alt="">
+  <div class="pv-ui"><span id="pv-n"></span><button type="button" data-act="tl-open">Timeline · T</button></div>
+</div>
+<div class="live" id="live" hidden aria-live="polite"></div>
+
+<!-- Timeline: the order of the talk. PPT pages on the top track, website scenes on the bottom track. -->
+<div class="tl" id="tl" hidden role="dialog" aria-label="Timeline of the talk">
+  <div class="tl-head"><b>Timeline</b><span>Plays left to right. Drag a card to change the order; click a card to go there.</span>
+    <span class="tl-warn" id="tl-warn"></span><span class="sp"></span>
+    <button type="button" id="tl-same" data-act="tl-reset">Back to the PPT order</button><button type="button" data-act="tl-close">Close · T</button></div>
+  <div class="tl-rows"><div class="tl-names"><span>PPT</span><span></span><span>Website</span></div>
+    <div class="tl-scroll"><div class="tl-axis" id="tl-axis"></div></div></div>
+</div>
 
 <!-- PowerPoint slides inside the page. Only on a computer where a presenter saved a Canva embed link (key P);
      the public site carries no link, so this layer stays empty for everyone else. -->
@@ -79,7 +99,7 @@
 <script src="./app/geo.js"></script>
 <script src="./app/scenes.js"></script>
 <script src="./app/render.js"></script>
-<script src="./app/sound.js"></script>
+<script src="./app/music.js"></script>
 <script src="./app/main.js"></script>
 </body>
 </html>

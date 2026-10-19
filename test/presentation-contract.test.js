@@ -13,13 +13,14 @@ const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 const S = require('../app/scenes.js');
 
 test('The page loads the single rules core before every interface script', () => {
-  const order = ['./rtpl-core.js', './app/geo.js', './app/scenes.js', './app/render.js', './app/sound.js', './app/main.js'];
+  const order = ['./rtpl-core.js', './app/geo.js', './app/scenes.js', './app/render.js', './app/music.js', './app/main.js'];
   const at = order.map(src => html.indexOf(`<script src="${src}"></script>`));
   assert.ok(at.every(i => i > 0), 'all scripts present');
   assert.deepEqual([...at].sort((a, b) => a - b), at, 'scripts load in dependency order');
-  const sound = fs.readFileSync(path.join(root, 'app/sound.js'), 'utf8');
-  for (const api of ['fetch(', 'XMLHttpRequest', 'localStorage', 'new Audio(']) assert.equal(sound.includes(api), false, `sound.js must not use ${api}`);
-  for (const f of ['app/geo.js', 'app/scenes.js', 'app/render.js', 'app/sound.js', 'app/main.js']) {
+  const music = fs.readFileSync(path.join(root, 'app/music.js'), 'utf8');
+  for (const api of ['fetch(', 'XMLHttpRequest', 'localStorage', 'http://']) assert.equal(music.includes(api), false, `music.js must not use ${api}`);
+  assert.match(music, /SRC = '\.\/assets\/music\/higher-up\.mp3'/, 'the track is a local file');
+  for (const f of ['app/geo.js', 'app/scenes.js', 'app/render.js', 'app/music.js', 'app/main.js']) {
     const src = fs.readFileSync(path.join(root, f), 'utf8');
     assert.equal(src.includes('function budget('), false, `${f} must not re-implement the rules`);
   }
@@ -89,7 +90,7 @@ test('Every website slide names the same presenter as the PPT, and all 15 PPT sl
 });
 
 test('The public site carries no link to the slides (it is saved only on the presenting computer)', () => {
-  const files = ['index.html', 'README.md', 'docs/ARCHITECTURE.md', 'app/geo.js', 'app/scenes.js', 'app/render.js', 'app/sound.js', 'app/main.js'];
+  const files = ['index.html', 'README.md', 'docs/ARCHITECTURE.md', 'app/geo.js', 'app/scenes.js', 'app/render.js', 'app/music.js', 'app/main.js'];
   for (const f of files) {
     const src = fs.readFileSync(path.join(root, f), 'utf8');
     assert.doesNotMatch(src, /canva\.com\/design\/DA[A-Za-z0-9_-]+\/[A-Za-z0-9_-]+/, `${f} must not contain a Canva design link`);
@@ -102,4 +103,23 @@ test('Animations do not depend on the OS reduce-motion setting (still version on
   assert.ok(!main.includes("matchMedia('(prefers-reduced-motion"));
   assert.ok(!css.includes('@media (prefers-reduced-motion'));
   assert.ok(main.includes("has('calm')"));
+});
+
+test('The talk plays every PPT page in order, each website scene right after its page', () => {
+  const order = S.SHOW_DEFAULT;
+  const pages = order.filter(x => x[0] === 'p').map(x => +x.slice(1));
+  assert.deepEqual(pages, Array.from({length: S.PPT_TOTAL}, (_, k) => k + 1));
+  for (const s of S.SCENES.filter(x => x.group === 'main')) assert.equal(order[order.indexOf('p' + s.slide) + 1], 'w:' + s.id, s.id);
+  assert.equal(order[0], 'p1', 'opens on the cover');
+  for (let n = 1; n <= S.PPT_TOTAL; n++) {
+    const f = String(n).padStart(2, '0') + '.webp';
+    assert.ok(fs.existsSync(path.join(root, 'assets/slides', f)), 'slide ' + f);
+    assert.ok(fs.existsSync(path.join(root, 'assets/slides/thumb', f)), 'thumbnail ' + f);
+  }
+});
+
+test('The music is the credited CC BY track, and no synthesised sound is left', () => {
+  assert.ok(fs.existsSync(path.join(root, 'assets/music/higher-up.mp3')));
+  assert.ok(html.includes('silvermansound.com'), 'credit in the footer');
+  assert.equal(fs.existsSync(path.join(root, 'app/sound.js')), false);
 });
