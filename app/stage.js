@@ -23,7 +23,7 @@
   // Where things sit on PPT page 1 (1920 × 1080 image): the ".RTPL" title and the line of names.
   const COVER = {title: [108, 745, 800, 225], names: [1145, 900, 555, 90]};
   const TRACK_KEY = 'rtpl.track';
-  const ST = {phase: 'off', spot: -1, tl: null, raf: 0, busy: false};
+  const ST = {phase: 'off', tl: null, raf: 0, idle: null};
 
   /* ---------- artwork ---------- */
   // Side view of a delivery rider on a scooter, facing right. 420 × 300 units; wheels centred at (105, 248) and (330, 248).
@@ -82,7 +82,7 @@
       </div>
       <div class="sh-cover" id="sh-cover"><img src="./assets/slides/01.webp" alt=""></div>
       <div class="sh-title" id="sh-title"><b><i></i>RTPL</b><span>Rider Time Protection Layer</span></div>
-      <div class="sh-team" id="sh-team"><div class="sh-tlabel">Meet the team · T1 Mixue Bingcheng</div><div class="sh-cards">${team}</div></div>
+      <div class="sh-team" id="sh-team"><div class="sh-tlabel">Meet the team · T1 Mixue Bingcheng</div><div class="sh-cards">${team}<i class="sh-shine"></i></div></div>
       <div class="sh-sweep" id="sh-sweep">${RIDER}</div>
       <div class="sh-splash" id="sh-splash">
         <button type="button" class="sh-go" id="sh-go" aria-label="Start the presentation">${RIDER}</button>
@@ -157,33 +157,124 @@
       .to('#sh-hud', {autoAlpha: 0, duration: .3}, T)
       .fromTo('.sh-tlabel', {autoAlpha: 0, y: 20}, {autoAlpha: 1, y: 0, duration: .6}, T + .6)
       .fromTo('.tm', {autoAlpha: 0, y: 80, rotationX: -40}, {autoAlpha: 1, y: 0, rotationX: 0, duration: .7, ease: 'back.out(1.6)', stagger: beat}, T + 4 * beat)
-      .call(() => { ST.phase = 'team'; ST.spot = -1; hint('→ spotlight the first member'); }, null, T + 4 * beat + 6 * beat);
+      .call(() => { ST.phase = 'team'; teamIdle(); hint('→ the whole team, together'); }, null, T + 4 * beat + 6 * beat);
     // Run the timeline on the music's clock, so the picture stays on the beat (or on the wall clock without sound).
     const t0 = performance.now();
     const tick = () => {
       const p = M.position();
       tl.time(p !== null && p > 0 ? p : (performance.now() - t0) / 1000, false);
-      if (tl.time() < tl.duration()) ST.raf = requestAnimationFrame(tick);
+      if (ST.tl === tl && tl.time() < tl.duration()) ST.raf = requestAnimationFrame(tick);
     };
     ST.raf = requestAnimationFrame(tick);
   }
 
-  /* ---------- 2 team: one spotlight per → ---------- */
-  function spotlight(i) {
-    ST.spot = i;
-    if (i === 0) M.duck(.22, 1500);       // voices over the music from here on
-    M.sfx('tap', .55);
-    document.querySelectorAll('.tm').forEach((el, k) => {
-      // Dim the others with brightness, not transparency, so the city behind never shows through their text.
-      gsap.to(el, {scale: k === i ? 1.12 : .94, y: k === i ? -26 : 0, filter: k === i ? 'brightness(1) saturate(1)' : 'brightness(.42) saturate(.5)', duration: .55, ease: 'power3.out'});
-      el.classList.toggle('lit', k === i);
-    });
-    hint(i < TEAM.length - 1 ? `${TEAM[i].name} · → next member` : `${TEAM[i].name} · → to the cover`);
+  /* ---------- 2 team: the cards float; one → lights the whole team at once ---------- */
+  function teamIdle() {
+    if (ST.idle) ST.idle.kill();
+    ST.idle = gsap.to('.tm', {y: -10, duration: 1.4, yoyo: true, repeat: -1, ease: 'sine.inOut', stagger: {each: .22, repeat: -1, yoyo: true}});
+  }
+  function teamTogether() {
+    ST.phase = 'team-lit';
+    if (ST.idle) ST.idle.kill();
+    M.sfx('hit', .8);
+    document.querySelectorAll('.tm').forEach(el => el.classList.add('lit'));
+    const tl = gsap.timeline();
+    tl.to('.tm', {rotationY: 360, y: -24, scale: 1.06, duration: .9, ease: 'power3.inOut', stagger: .07}, 0)
+      .to('.tm', {y: 0, scale: 1, duration: .6, ease: 'back.out(2)', stagger: .07}, .9)
+      .fromTo('.sh-shine', {xPercent: -120, autoAlpha: 1}, {xPercent: 620, duration: 1.3, ease: 'power2.inOut'}, .2)
+      .set('.sh-shine', {autoAlpha: 0})
+      .set('.tm', {rotationY: 0})
+      .call(teamIdle);
+    // The members now introduce themselves: the music steps back under their voices.
+    setTimeout(() => M.duck(.22, 1600), 1400);
+    hint('Team introductions · → to the cover');
   }
 
+  /* ---------- handover card: who presents next (between presenters, shown until → ) ---------- */
+  const HO = {open: false, go: null};
+  function partOf(name, closing) { const i = TEAM.findIndex(m => m.name === name); return closing ? 'Closing' : String(i + 1).padStart(2, '0'); }
+  function handover(name, go, closing) {
+    const m = TEAM.find(x => x.name === name) || {name, role: '', slides: ''};
+    const el = $('hand');
+    el.innerHTML = `<div class="ho-road"></div><div class="ho-rider">${RIDER}</div>
+      <div class="ho-txt"><small>Next up</small><em>${partOf(name, closing)}</em><h2>${m.name}</h2><p>${closing ? 'Our ask and thanks' : m.role}</p><span>${m.slides}</span></div>
+      <div class="ho-hint">${m.name.split(' ')[0]} · press → to start</div>`;
+    el.hidden = false;
+    HO.open = true; HO.go = go;
+    M.sfx('whoosh', .7); setTimeout(() => M.sfx('hit', .75), 450);
+    const W = innerWidth;
+    gsap.timeline()
+      .fromTo(el, {clipPath: 'inset(0 100% 0 0)'}, {clipPath: 'inset(0 0% 0 0)', duration: .7, ease: 'power3.inOut'}, 0)
+      .fromTo('#hand .ho-rider', {x: -0.4 * W}, {x: 1.2 * W, duration: 1.3, ease: 'power2.inOut'}, 0)
+      .fromTo('#hand .ho-road', {scaleX: 0}, {scaleX: 1, duration: 1.1, ease: 'power3.out', transformOrigin: '0 50%'}, .1)
+      .fromTo('#hand .ho-txt em', {autoAlpha: 0, scale: 1.8}, {autoAlpha: 1, scale: 1, duration: .6, ease: 'expo.out'}, .45)
+      .fromTo('#hand .ho-txt small, #hand .ho-txt h2, #hand .ho-txt p, #hand .ho-txt span', {autoAlpha: 0, y: 30}, {autoAlpha: 1, y: 0, duration: .55, stagger: .08, ease: 'power3.out'}, .6)
+      .fromTo('#hand .ho-hint', {autoAlpha: 0}, {autoAlpha: 1, duration: .6}, 1.4);
+  }
+  // → on the card: switch to the new presenter's first page underneath, then wipe the card away.
+  function handoverGo() {
+    if (!HO.open) return;
+    HO.open = false;
+    const go = HO.go; HO.go = null;
+    if (go) go();
+    M.sfx('whoosh', .5);
+    gsap.to('#hand', {clipPath: 'inset(0 0 0 100%)', duration: .75, ease: 'power3.inOut', delay: .25, onComplete: () => { $('hand').hidden = true; gsap.set('#hand', {clipPath: 'none'}); }});
+  }
+  function handoverCancel() { if (!HO.open) return; HO.open = false; HO.go = null; gsap.to('#hand', {autoAlpha: 0, duration: .3, onComplete: () => { $('hand').hidden = true; gsap.set('#hand', {autoAlpha: 1}); }}); }
+
+  /* ---------- curtain call after the last page: thank you, the team, a QR code to the prototype ---------- */
+  const SITE = 'https://jason-d-e.github.io/rtpl-fit1055/';
+  function curtain() {
+    ST.phase = 'curtain';
+    let qr = '';
+    try { const q = window.qrcode(0, 'M'); q.addData(SITE); q.make(); qr = q.createSvgTag({cellSize: 4, margin: 2, scalable: true}); } catch (e) { /* no QR, the link is still shown */ }
+    const team = TEAM.map(m => `<div class="tm lit"><div class="tm-av"><svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="30" r="22" fill="#FFC20E"/><path d="M32 30 L54 27 Q54 44 42 47 L32 42 Z" fill="#1F262D"/></svg><b>${m.name.split(' ').map(w => w[0]).join('')}</b></div><h3>${m.name}</h3><small>${m.slides}</small></div>`).join('');
+    $('show').innerHTML = `<div class="cc">
+        <div class="cc-lights"></div>
+        <h1 class="cc-title" id="cc-title"><i></i><span id="cc-word">Thank you</span></h1>
+        <p class="cc-sub" id="cc-sub">RTPL · Rider Time Protection Layer · T1 Mixue Bingcheng</p>
+        <div class="sh-cards cc-cards">${team}</div>
+        <div class="cc-qr"><div class="cc-code">${qr}</div><span>Try the prototype<b>${SITE.replace('https://', '')}</b></span></div>
+        <div class="sh-sweep cc-rider">${RIDER}</div>
+      </div><div class="sh-hint" id="sh-hint"></div>`;
+    $('show').hidden = false;
+    gsap.set('#show', {autoAlpha: 1});
+    const t = M.use(localTrack()), beat = 60 / t.bpm;
+    M.play(Math.max(0, t.drop - 4 * beat));          // straight into the song's high point
+    M.sfx('whoosh', .8);
+    const W = innerWidth;
+    gsap.timeline()
+      .fromTo('#show', {clipPath: 'circle(0% at 50% 50%)'}, {clipPath: 'circle(150% at 50% 50%)', duration: 1.2, ease: 'power3.inOut'}, 0)
+      .fromTo('.cc-rider', {x: -0.4 * W, autoAlpha: 1}, {x: 1.2 * W, duration: 1.6, ease: 'power2.inOut'}, .2)
+      .fromTo('#cc-title', {autoAlpha: 0, scale: 2.2, letterSpacing: '.3em'}, {autoAlpha: 1, scale: 1, letterSpacing: '0em', duration: .9, ease: 'expo.out'}, 4 * beat)
+      .fromTo('#cc-sub', {autoAlpha: 0, y: 20}, {autoAlpha: 1, y: 0, duration: .6}, 4 * beat + .4)
+      .fromTo('.cc-cards .tm', {autoAlpha: 0, y: 120, rotationX: -50}, {autoAlpha: 1, y: 0, rotationX: 0, duration: .8, ease: 'back.out(1.5)', stagger: beat / 2}, 4 * beat + .6)
+      .fromTo('.cc-qr', {autoAlpha: 0, scale: .8}, {autoAlpha: 1, scale: 1, duration: .6, ease: 'back.out(2)'}, 4 * beat + 2)
+      .call(() => { ST.idle = gsap.to('.cc-cards .tm', {y: -10, duration: 1.4, yoyo: true, repeat: -1, ease: 'sine.inOut', stagger: {each: .22, repeat: -1, yoyo: true}}); });
+    hint('→ questions');
+  }
+  // → on the curtain: the song plays its own ending and the screen turns to questions.
+  function questions() {
+    ST.phase = 'qa';
+    M.outro();
+    gsap.timeline()
+      .to('#cc-word', {autoAlpha: 0, y: -30, duration: .35}, 0)
+      .add(() => { $('cc-word').textContent = 'Questions?'; }, .35)
+      .fromTo('#cc-word', {autoAlpha: 0, y: 30}, {autoAlpha: 1, y: 0, duration: .5, ease: 'power3.out'}, .36)
+      .to('#cc-sub', {autoAlpha: 0, duration: .3}, 0)
+      .add(() => { $('cc-sub').textContent = 'Each section owner answers first · the live website stays open for demos'; }, .35)
+      .to('#cc-sub', {autoAlpha: 1, duration: .4}, .4);
+    hint('→ back to the website');
+  }
+  function localTrack() { return chosenTrack(); }
+
   /* ---------- 3 into the cover: a rider sweeps the night into PPT page 1 ---------- */
+  // The film follows the music's clock; once the opening moves on it must stop listening, or a later
+  // song (the curtain call) would rewind it and replay its steps.
+  function stopFilm() { cancelAnimationFrame(ST.raf); if (ST.tl) { ST.tl.kill(); ST.tl = null; } }
   function toCover() {
     ST.phase = 'cover'; hint('');
+    stopFilm();
     M.outro(); M.sfx('whoosh', .9);
     const W = innerWidth, title = fit(COVER.title), names = fit(COVER.names);
     gsap.set('#sh-cover', {autoAlpha: 1, clipPath: 'inset(0 100% 0 0)'});
@@ -191,7 +282,8 @@
     const tb = $('sh-title').querySelector('b').getBoundingClientRect(), cards = $('sh-team').getBoundingClientRect();
     const ts = gsap.getProperty('#sh-title', 'scale'), cs = gsap.getProperty('#sh-team', 'scale');
     const tl = gsap.timeline({onComplete: done});
-    tl.to('.tm', {scale: 1, y: 0, filter: 'brightness(1) saturate(1)', duration: .3}, 0)
+    if (ST.idle) ST.idle.kill();
+    tl.to('.tm', {scale: 1, y: 0, duration: .3}, 0)
       .fromTo('#sh-sweep', {x: -0.45 * W, autoAlpha: 1}, {x: 1.15 * W, duration: 1.5, ease: 'power2.inOut'}, .2)
       .to('#sh-cover', {clipPath: 'inset(0 0% 0 0)', duration: 1.5, ease: 'power2.inOut'}, .2)
       // The title flies to the ".RTPL" on the cover and fades into it; the cards shrink into the line of names.
@@ -207,19 +299,25 @@
   }
   function done() {
     ST.phase = 'off';
+    stopFilm();
+    if (ST.idle) ST.idle.kill();
     gsap.to('#show', {autoAlpha: 0, duration: .4, onComplete: () => { $('show').hidden = true; $('show').innerHTML = ''; }});
     document.dispatchEvent(new CustomEvent('rtpl:stage-done'));
   }
 
-  function skip() { cancelAnimationFrame(ST.raf); if (ST.tl) ST.tl.kill(); M.stop(400); done(); }
+  function skip() { M.stop(400); done(); }
+  document.addEventListener('click', e => { if (HO.open && e.target.closest('#hand')) handoverGo(); });
 
   /* ---------- input while the show is on ---------- */
   function next() {
     if (ST.phase === 'splash') return film();
     if (ST.phase === 'film') return;                     // the film runs to the music
-    if (ST.phase === 'team') return ST.spot < TEAM.length - 1 ? spotlight(ST.spot + 1) : toCover();
+    if (ST.phase === 'team') return teamTogether();
+    if (ST.phase === 'team-lit') return toCover();
+    if (ST.phase === 'curtain') return questions();
+    if (ST.phase === 'qa') { M.stop(1500); return done(); }
   }
-  function back() { if (ST.phase === 'team' && ST.spot > 0) spotlight(ST.spot - 1); }
+  function back() { if (ST.phase === 'curtain' || ST.phase === 'qa') { M.stop(600); done(); } }
   document.addEventListener('click', e => {
     if (ST.phase === 'off') return;
     const tb = e.target.closest('[data-track]');
@@ -228,11 +326,17 @@
   });
 
   window.RTPLStage = {
-    active: () => ST.phase !== 'off',
-    // Keys while the show is on. Returns true when it used the key.
+    active: () => ST.phase !== 'off' || HO.open,
+    // Keys while the show (or a handover card) is on. Returns true when it used the key.
     key(e) {
-      if (ST.phase === 'off') return false;
       const k = e.key;
+      if (HO.open) {
+        if (k === 'ArrowRight' || k === ' ' || k === 'PageDown' || k === 'Enter') { e.preventDefault(); handoverGo(); }
+        else if (k === 'ArrowLeft' || k === 'PageUp' || k === 'Escape') { e.preventDefault(); handoverCancel(); }
+        else if (k === 'm' || k === 'M') M.toggle();
+        return true;
+      }
+      if (ST.phase === 'off') return false;
       if (k === 'ArrowRight' || k === ' ' || k === 'PageDown' || k === 'Enter') { e.preventDefault(); next(); return true; }
       if (k === 'ArrowLeft' || k === 'PageUp') { e.preventDefault(); back(); return true; }
       if (k === 's' || k === 'S') { skip(); return true; }       // skip the opening (rehearsals)
@@ -240,6 +344,10 @@
       return true;
     },
     start() { if (!gsap) return false; build(); splash(); return true; },
+    // Between presenters: show who is next, and run go() when the new presenter presses →.
+    handover(name, go, closing) { if (!gsap) { go(); return; } handover(name, go, closing); },
+    curtain() { if (gsap) curtain(); },
+    TEAM,
     fit
   };
 })();

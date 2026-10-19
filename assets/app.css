@@ -910,3 +910,42 @@ body.calm .banner { animation: none; }
   pointer-events: none; animation: pill 2.6s ease both; }
 .live-pill i { width: .7rem; height: .7rem; border-radius: 50%; background: #E1251B; animation: livedot 1.2s ease-out infinite; }
 @keyframes pill { 0% { opacity: 0; transform: translate(-50%, -20px); } 12%, 80% { opacity: 1; transform: translate(-50%, 0); } 100% { opacity: 0; transform: translate(-50%, -10px); } }
+
+/* team: one light sweeps across all six cards at once */
+.sh-cards { position: relative; overflow: visible; }
+.sh-shine { position: absolute; top: -10%; bottom: -10%; left: 0; width: 18%; pointer-events: none; opacity: 0; visibility: hidden; z-index: 2;
+  background: linear-gradient(100deg, transparent, rgba(255, 220, 120, .55), transparent); filter: blur(6px); mix-blend-mode: screen; }
+
+/* handover card between presenters */
+.handover { position: fixed; inset: 0; z-index: 97; background: radial-gradient(ellipse at 50% 60%, #151b24, #05070b 70%); color: #fff; overflow: hidden; cursor: pointer; }
+.handover[hidden] { display: none; }
+.ho-road { position: absolute; left: 0; right: 0; bottom: 18%; height: .5rem; background: repeating-linear-gradient(90deg, #FFC20E 0 70px, transparent 70px 140px); opacity: .8; }
+.ho-rider { position: absolute; left: 0; bottom: 18%; width: min(24vw, 380px); transform-origin: 50% 100%; filter: drop-shadow(-50px 0 40px rgba(255,194,14,.5)); }
+.ho-txt { position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; text-align: center; }
+.ho-txt small { font-size: clamp(.9rem, 1.4vw, 1.3rem); letter-spacing: .4em; text-transform: uppercase; color: #9FAAB5; }
+.ho-txt em { font-style: normal; font-weight: 800; font-stretch: 78%; font-size: clamp(5rem, 13vw, 12rem); line-height: .9; color: transparent; -webkit-text-stroke: 3px #FFC20E; margin: .3rem 0 .2rem; }
+.ho-txt h2 { margin: 0; font-size: clamp(2.6rem, 6vw, 6rem); font-weight: 800; font-stretch: 82%; line-height: 1; }
+.ho-txt p { margin: .7rem 0 .4rem; font-size: clamp(1.1rem, 2vw, 1.8rem); color: #C9D1D8; }
+.ho-txt span { font-size: clamp(.9rem, 1.4vw, 1.25rem); font-weight: 700; color: #FFC20E; }
+.ho-hint { position: absolute; left: 50%; bottom: 7%; transform: translateX(-50%); font-size: 1rem; color: #8995A1; letter-spacing: .08em; animation: blink 1.6s ease-in-out infinite; }
+@keyframes blink { 50% { opacity: .35; } }
+
+/* curtain call */
+.cc { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1.2rem; padding: 4vh 3vw 10vh;
+  background: radial-gradient(ellipse at 50% 30%, #1d2533, #05070b 70%); overflow: hidden; }
+.cc-lights { position: absolute; inset: 0; pointer-events: none; opacity: .55;
+  background: conic-gradient(from 200deg at 30% -10%, transparent 0 8deg, rgba(255,214,107,.18) 8deg 14deg, transparent 14deg 360deg),
+              conic-gradient(from 160deg at 70% -10%, transparent 0 8deg, rgba(255,214,107,.18) 8deg 14deg, transparent 14deg 360deg); animation: sway 6s ease-in-out infinite alternate; }
+@keyframes sway { to { transform: translateX(3%); } }
+.cc-title { margin: 0; display: flex; align-items: center; gap: .2em; font-size: clamp(4rem, 11vw, 10rem); font-weight: 800; font-stretch: 82%; line-height: .95; opacity: 0; visibility: hidden; }
+.cc-title i { width: .28em; height: .28em; border-radius: 50%; background: #C8102E; flex: none; }
+.cc-sub { margin: 0; font-size: clamp(1rem, 1.6vw, 1.4rem); color: #FF5A4F; font-weight: 700; opacity: 0; visibility: hidden; text-align: center; }
+.cc-cards { width: min(92vw, 1400px); margin-top: 2vh; }
+.cc-cards .tm { padding: 1rem .7rem .9rem; }
+.cc-qr { position: absolute; right: 2vw; bottom: 3vh; display: flex; align-items: center; gap: .9rem; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.14);
+  border-radius: 1rem; padding: .7rem .9rem; opacity: 0; visibility: hidden; }
+.cc-code { width: 7.5rem; background: #fff; border-radius: .5rem; padding: .3rem; }
+.cc-code svg { display: block; width: 100%; height: auto; }
+.cc-qr span { font-size: .85rem; color: #9FAAB5; display: flex; flex-direction: column; gap: .2rem; }
+.cc-qr b { color: #FFC20E; font-size: .95rem; }
+.cc-rider { bottom: 2%; }

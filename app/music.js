@@ -51,9 +51,9 @@
       return track;
     },
     // Start the opening music (from a key press or click, which browsers require before any sound).
-    play() {
+    play(from) {
       if (!main) Music.use();
-      main.currentTime = track.start;
+      main.currentTime = from === undefined ? track.start : from;
       main._v = 0; main.volume = 0;
       const p = main.play(); if (p && p.catch) p.catch(() => {});
       ramp(main, FULL, 600);

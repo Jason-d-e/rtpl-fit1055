@@ -46,8 +46,16 @@
     if (st.gate) return st.deck && st.gate.pptOnly.length ? openDeck('gate') : gateGo();
     if (!st.pptOn && st.b < s.beats.length - 1) return go(st.i, st.b + 1, true);
     const k = curK();
-    if (k >= 0 && k < st.show.length - 1) toItem(k + 1, 'first');
+    if (k < 0) return;
+    const S2 = window.RTPLStage;
+    // After the last page: the curtain call.
+    if (k === st.show.length - 1) { if (S2) S2.curtain(); return; }
+    // A new presenter: a handover card names them and waits for their →, then their first page appears.
+    const from = ownerOf(st.show[k]), to = ownerOf(st.show[k + 1]);
+    if (S2 && from !== to) return S2.handover(to, () => toItem(k + 1, 'first', true), st.show[k + 1] === 'p' + S.PPT_TOTAL);
+    toItem(k + 1, 'first');
   }
+  function ownerOf(it) { return it[0] === 'p' ? S.PPT_OWNER[+it.slice(1)] : SCENES.find(s => s.id === it.slice(2)).presenter; }
   // ← goes back a step, or quickly to the previous item.
   function back() {
     setPaused(false);
