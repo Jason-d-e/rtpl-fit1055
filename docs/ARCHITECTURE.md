@@ -22,4 +22,4 @@ app/main.js ──── which scene/step is showing, keyboard, animation, live 
 - Customer states never contain decision, evidence, effect or appeal fields (checked in `test/scenes.test.js`).
 - The audit export has exactly the ten minimised fields (checked in both the Node and browser tests).
 - Movement on the map is presentation only. Faster animation never changes a result.
-- No runtime script calls a network or browser-storage API.
+- No runtime script calls a network or browser-storage API. The one exception is opt-in and local: a presenter can save a Canva embed link for the slides in that browser's localStorage, and the page then shows it in an iframe. No link is part of the site.

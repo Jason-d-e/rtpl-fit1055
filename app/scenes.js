@@ -198,7 +198,7 @@
       beats: [
         {time: 0, center: 'handphone', solo: true, hand: hand('order', 0),
           caption: '12:00. A customer orders lunch from Noodle Kitchen: two beef noodle soups and an iced lemon tea, to Maple Court, 4 km away.',
-          note: 'Let the animation play: open the app, pick the shop, add the food, pay. Press → once it says Order placed.'},
+          note: 'On page load this waits on the first frame: press → (or R) to start. Let the animation play: open the app, pick the shop, add the food, pay. Press → once it says Order placed.'},
         {time: 0, center: 'handphone', solo: true, hand: hand('order', 1), result: 'The AI suggests 12:24',
           caption: 'The order goes to the platform. Its AI picks a rider and suggests a delivery time: 12:24. That is only 24 minutes.',
           note: 'Point at 12:24. Press → to show what the trip really takes.'},

@@ -88,6 +88,14 @@ test('Every website slide names the same presenter as the PPT, and all 15 PPT sl
   for (const s of S.SCENES.filter(x => x.group === 'main')) assert.equal(S.PPT_OWNER[s.slide], s.presenter, `slide ${s.slide}`);
 });
 
+test('The public site carries no link to the slides (it is saved only on the presenting computer)', () => {
+  const files = ['index.html', 'README.md', 'docs/ARCHITECTURE.md', 'app/geo.js', 'app/scenes.js', 'app/render.js', 'app/sound.js', 'app/main.js'];
+  for (const f of files) {
+    const src = fs.readFileSync(path.join(root, f), 'utf8');
+    assert.doesNotMatch(src, /canva\.com\/design\/DA[A-Za-z0-9_-]+\/[A-Za-z0-9_-]+/, `${f} must not contain a Canva design link`);
+  }
+});
+
 test('Animations do not depend on the OS reduce-motion setting (still version only with ?calm)', () => {
   const main = fs.readFileSync(path.join(root, 'app/main.js'), 'utf8');
   const css = fs.readFileSync(path.join(root, 'assets/app.css'), 'utf8');

@@ -305,14 +305,19 @@
     return `<div class="ap-status"><span>${clock(time)}</span><i></i><span>5G ▮▮▮</span></div><div class="ap-bar"><b>Lantern Eats</b><small>invented demo app</small></div><div class="ap-body">${body}</div>`;
   }
 
-  const SKIN = '#F2C29C', SKIN_D = '#E2A97F', CREASE = '#CF936B', SLEEVE = '#33414F';
-  const PALM = `<svg class="hp-palm" viewBox="0 0 320 640" aria-hidden="true"><path d="M84 640C70 596 36 540 36 470C38 410 70 368 112 360L246 358C284 362 302 398 300 452C298 522 266 592 254 640Z" fill="${SKIN_D}"/><path d="M70 610Q165 628 264 610L270 640H62Z" fill="${SLEEVE}"/></svg>`;
-  const GRIP = `<svg class="hp-grip" viewBox="0 0 320 640" aria-hidden="true">${[286, 330, 374, 418].map(y => `<rect x="259" y="${y}" width="40" height="36" rx="18" fill="${SKIN}"/><path d="M266 ${y + 18}h12" stroke="${CREASE}" stroke-width="2" stroke-linecap="round"/>`).join('')}
-    <path d="M38 500C30 460 36 418 54 392C64 378 84 380 82 400C78 428 74 456 78 500Z" fill="${SKIN}"/><path d="M60 392C62 383 78 382 80 392L79 406C73 410 64 409 60 404Z" fill="#F9DFCB"/></svg>`;
-  const FINGER = `<svg viewBox="0 0 140 300" width="100%" height="100%" aria-hidden="true"><path d="M30 170C26 140 44 124 62 130H104C126 132 138 156 136 184L132 300H44C34 256 28 210 30 170Z" fill="${SKIN_D}"/>
-    <path d="M50 16C50 2 82 2 82 16L86 150C76 158 58 158 48 150Z" fill="${SKIN}"/><path d="M54 18C54 8 78 8 78 18V38C72 43 60 43 54 38Z" fill="#F9DFCB"/>
-    <path d="M52 78Q66 83 84 78M51 112Q66 117 85 112M88 160C104 156 122 160 132 170M86 194C104 190 122 194 134 204M86 228C102 224 120 228 132 238" stroke="${CREASE}" stroke-width="2.6" fill="none" stroke-linecap="round"/>
-    <path d="M28 186C48 172 74 176 90 190C80 202 52 206 30 212Z" fill="${SKIN}"/><path d="M40 268H136L134 300H44Z" fill="${SLEEVE}"/></svg>`;
+  // Hands from "Dotted background with hands using a mobile phone", designed by Freepik
+  // (https://www.freepik.com/free-vector/dotted-background-with-hands-using-mobile-phone_1072215.htm),
+  // free licence with attribution: credited in the label beside the hands. The shapes are unchanged; the left hand is
+  // split into what sits behind the phone and what wraps over it, and placed on this phone: 10% larger and
+  // centred on its bottom edge, so the thumb rests on the frame and the fingertips only just reach the screen.
+  // Artwork phone: centre x 400, bottom 520. This phone: centre x 160, bottom 480 (1 artwork unit = 1 unit here).
+  const HANDS_CREDIT = 'https://www.freepik.com/free-vector/dotted-background-with-hands-using-mobile-phone_1072215.htm';
+  const ART_LEFT = 'translate(164 480) scale(1.1) translate(-400 -520)';
+  const PALM = `<svg class="hp-palm" viewBox="0 0 320 640" aria-hidden="true"><g transform="${ART_LEFT}"><path style="fill:#FDD2A2;" d="M523.802,291.216v162.98c-16.85,63.248-73.953,90.275-151.06,98.7s-94.202,47.742-94.202,47.742 l-83.314-97.356c33.7-21.765,36.516-50.36,35.817-63.297L523.802,291.216z" /><polygon style="fill:#F1F1F2;" points="179.738,482.859 295.567,618.982 269.605,643.321 153.995,505.244 " /><polygon style="fill:#333333;" points="142.294,487.926 -105.701,685.576 -52.09,757.173 199.945,556.881 " /><polygon style="fill:#292929;" points="285.519,659.234 199.945,556.881 -52.09,757.173 25.28,860.499 " /><circle style="fill:#FFE96E;" cx="135.741" cy="556.881" r="16.232" /></g></svg>`;
+  const GRIP = `<svg class="hp-grip" viewBox="0 0 320 640" aria-hidden="true"><g transform="${ART_LEFT}"><path style="opacity:0.29;fill:#231F20;" d="M310.794,384.883c0-49.216-6.085-54.224-11.633-72.01 c-5.548-17.786-1.005-35.104-0.069-55.34c0.936-20.236-7.973-33.902-7.973-33.902v250.826 C301.454,455.573,310.794,428.852,310.794,384.883z" /><path style="opacity:0.29;fill:#231F20;" d="M509.065,466.959V257.676c-4.645,0.271-9.216,2.229-13.267,5.92 c-10.982,10.007-25.316,23.044-13.935,40.204c3.971,5.987,8.697,8.889,13.741,9.873c-0.418,0.329-0.834,0.666-1.247,1.016 c-14.773,12.522-34.054,28.838-22.673,45.999c6.117,9.224,15.457,10.187,25.471,7.753 c-13.341,11.702-26.61,25.978-16.719,40.892c4.607,6.947,11.042,9.209,18.216,8.864c-13,11.398-26.755,25.578-16.491,41.053 C488.744,469.175,498.681,469.784,509.065,466.959z" /><g><path style="fill:#FDD2A2;" d="M291.12,463.833c24.896-90.162,4.596-141.287,1.029-155.433 c-3.567-14.146,3.567-27.043,0-68.232c-3.567-41.189-37.622-45.87-42.302-31.828c-4.681,14.042-3.745,77.229-4.681,94.27 s-6.553,47.083-14.978,64.869c-8.425,17.786,0,65.62,0,65.62l0.856,6.885L291.12,463.833z" /><path style="fill:#FFE8C1;" d="M264.886,233.385c-0.898-18.02-11.063-21.528-15.785-22.183 c-2.408,10.04-2.996,33.528-3.318,53.113c9.927-0.001,19.103-2.317,19.103-7.109 C264.886,251.462,264.886,233.385,264.886,233.385z" /></g><g><path style="fill:#FDD2A2;" d="M528.53,303.454c13.246-6.111,16.47-20.529,6.892-34.971 c-9.578-14.442-24.115-17.082-34.897-7.256c-10.782,9.826-24.857,22.626-13.683,39.475 C498.016,317.551,515.283,309.565,528.53,303.454z" /><path style="fill:#FDD2A2;" d="M527.114,353.621c16.969-8.579,22.945-24.823,13.367-39.265 c-9.578-14.442-26.866-15.257-41.372-2.962c-14.505,12.295-33.436,28.315-22.262,45.164 C488.022,373.407,510.145,362.2,527.114,353.621z" /><path style="fill:#FDD2A2;" d="M535.707,401.383c16.969-8.579,22.945-24.823,13.367-39.265 c-9.578-14.442-26.866-15.257-41.372-2.962c-14.505,12.295-33.436,28.315-22.262,45.164 C496.615,421.169,518.738,409.962,535.707,401.383z" /><path style="fill:#FDD2A2;" d="M535.443,451.693c16.119-8.016,21.466-23.843,11.888-38.285 c-9.578-14.442-26.238-15.673-39.894-3.942c-13.655,11.731-31.477,27.016-20.303,43.865 C498.309,470.18,519.323,459.708,535.443,451.693z" /><path style="fill:#FFE8C1;" d="M493.391,449.428c5.619,8.234,17.943,4.349,25.453-0.776c0,0,4.687-3.857-2.618-14.561 c-7.305-10.704-12.835-8.081-12.835-8.081C495.881,431.134,487.772,441.194,493.391,449.428z" /><path style="fill:#FFE8C1;" d="M491.236,401.012c6.001,8.793,19.162,4.645,27.182-0.829c0,0,5.005-4.12-2.796-15.551 s-13.707-8.63-13.707-8.63C493.895,381.475,485.235,392.219,491.236,401.012z" /><path style="fill:#FFE8C1;" d="M484.064,351.72c6.001,8.793,19.162,4.645,27.182-0.829c0,0,5.006-4.119-2.796-15.55 c-7.801-11.431-13.707-8.631-13.707-8.631C486.724,332.183,478.063,342.927,484.064,351.72z" /><path style="fill:#FFE8C1;" d="M491.236,296.77c6.001,8.793,19.162,4.645,27.182-0.829c0,0,5.005-4.12-2.796-15.551 c-7.801-11.431-13.707-8.631-13.707-8.631C493.895,277.233,485.235,287.977,491.236,296.77z" /></g></g></svg>`;
+  // Tapping hand in artwork units. Its index fingertip, (354, 418), is the point main.js aims with:
+  // 13.6% across and 2.5% down this box (see FINGER_TIP in main.js and .hp-finger in app.css).
+  const FINGER = `<svg viewBox="305 405 360 520" width="100%" height="100%" aria-hidden="true"><g><g><path style="fill:#FDD2A2;" d="M476.8,725.382c0,0-33.879-32.328-48.199-54.863c-14.321-22.534-29.179-75.583-30.08-84.819 c-0.901-9.236-57.587-127.753-62.226-138.937c-4.64-11.183-2.568-28.169,12.525-32.75c15.093-4.581,27.221,8.222,34.182,19.042 s59.9,108.247,59.9,108.247s-3.463-18.804,15.006-25.424c18.468-6.62,26.226,5.988,26.226,5.988s-1.799-13.655,9.57-18.184 c11.369-4.528,19.118-1.555,23.939,3.258c0,0,1.133-10.678,11.064-12.424c9.931-1.746,14.699-0.658,22.103,5.147 c7.404,5.804,23.526,23.023,30.023,33.745c10.416,17.19,30.128,57.781,28.856,81.371c-1.272,23.59-0.051,43.403,1.846,54.873 c1.896,11.47,21.598,55.702,21.598,55.702l-119.739,53.333C513.393,778.688,496.669,731.524,476.8,725.382z" /><path style="fill:#FFE8C1;" d="M350.214,423.772c-9.966,5.257-7.18,19.594-2.385,28.684c0,0,3.732,5.757,16.688-1.077 c12.955-6.834,10.718-13.38,10.718-13.38C370.44,428.909,360.18,418.515,350.214,423.772z" /></g><g><polygon style="fill:#F1F1F2;" points="476.284,755.29 636.03,675.122 653.503,706.124 491.911,785.615 " /><polygon style="fill:#333333;" points="472.309,792.866 605.372,1080.723 687.657,1045.659 552.987,753.251 " /><polygon style="fill:#292929;" points="672.743,694.447 552.987,753.251 687.657,1045.659 806.408,995.056 " /></g><path style="fill:#FDD2A2;" d="M476.8,725.382c0,0-72.149-47.566-104.712-70.393c-22.484-15.762-75.164-46.907-53.821-62.581 c20.729-15.222,47.274-3.088,66.149,13.804c11.018,9.86,28.243,17.778,28.243,17.778L476.8,725.382z" /><path style="fill:#FFE8C1;" d="M313.77,606.034c2.786,8.264,14.308,18.169,26.634,27.206 c14.532-11.213,10.569-17.571,10.569-17.571C327.551,595.703,316.43,603.462,313.77,606.034z" /></g></svg>`;
 
   function backend(h) {
     const p = h.parts, scale = 40, pc = v => (v / scale * 100).toFixed(2);
@@ -340,7 +345,7 @@
     const screen = h.script === 'order' ? apScreen('paid', h) : apScreen('status', h);
     return `<div class="hp ${side ? 'with-side' : ''}" id="hp"><div class="hp-cam ${side ? '' : 'mid'}" id="hp-cam"><div class="hp-dev" id="hp-dev">${PALM}
       <div class="hp-phone"><div class="hp-screen" id="hp-screen">${screen}</div></div>${GRIP}<div class="hp-finger" id="hp-finger">${FINGER}</div></div></div>
-      ${side ? `<div class="hp-side" id="hp-side">${backend(h)}</div>` : ''}${h.script === 'order' && h.stage === 0 ? guide() : ''}<div class="hp-tag">Invented app, shop and address</div></div>`;
+      ${side ? `<div class="hp-side" id="hp-side">${backend(h)}</div>` : ''}${h.script === 'order' && h.stage === 0 ? guide() : ''}<div class="hp-tag">Invented app, shop and address · Hands <a href="${HANDS_CREDIT}" target="_blank" rel="noopener">designed by Freepik</a></div></div>`;
   }
   const GUIDE = ['Open the app', 'Choose a shop', 'Add the food', 'Pay', 'Order placed'];
   function guide() {
@@ -472,15 +477,21 @@
     return runs;
   }
   const first = name => esc(String(name).split(' ')[0]);
-  function gate(from, to, pptOnly) {
+  // deckOn: this computer has the PowerPoint slides inside the page, so the PowerPoint box is a real button.
+  function gate(from, to, pptOnly, deckOn) {
     const runs = pptRuns(pptOnly);
-    const switchTo = runs.length ? `<div class="g-ppt"><small>Now switch to PowerPoint</small>
-        ${runs.map(([a, b, who]) => `<div class="g-run"><b>${a === b ? 'Slide ' + a : 'Slides ' + a + '–' + b}</b><span>${esc(who)}</span></div>`).join('')}</div>` : '';
+    const runLines = runs.map(([a, b, who]) => `<span class="g-run"><b>${a === b ? 'Slide ' + a : 'Slides ' + a + '–' + b}</b><span>${esc(who)}</span></span>`).join('');
+    const switchTo = !runs.length ? ''
+      : deckOn ? `<button type="button" class="g-ppt" data-act="gate-ppt"><small>Now switch to PowerPoint</small>${runLines}
+          <span class="g-open">Press <kbd>→</kbd> or click here to show the slides</span></button>`
+      : `<div class="g-ppt"><small>Now switch to PowerPoint</small>${runLines}</div>`;
     const handover = to && to.presenter !== from.presenter;
     const nextLine = to
       ? `<div class="g-next"><small>${runs.length ? 'Then the website continues at' : handover ? 'Hand over to' : 'Next on the website'}</small>
           <div class="g-run"><b>PPT slide ${to.slide}</b><span>${esc(to.presenter)} · ${esc(to.short)}</span></div>
-          <p>Press <kbd>→</kbd> only when ${first(to.presenter)} starts slide ${to.slide}.</p></div>`
+          ${deckOn && runs.length
+            ? `<p>After slide ${runs[runs.length - 1][1]}, click <b>Back to the website</b> under the slides.</p>`
+            : `<p>Press <kbd>→</kbd> only when ${first(to.presenter)} starts slide ${to.slide}.</p>`}</div>`
       : `<div class="g-next end"><small>Website part finished</small><p>Stay in PowerPoint from slide ${from.slide + 1}. The website is only needed again for questions.</p></div>`;
     return `<div class="g">
       <div class="g-top"><span class="g-done">✓</span><div><small>End of PPT slide ${from.slide} on the website</small>

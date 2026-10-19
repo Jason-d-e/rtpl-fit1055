@@ -29,6 +29,7 @@ The screen has three parts that always stay in sync:
 
 ## Presenting
 
+- The page opens on slide 2 and waits on its first frame: the first **→** (or **R**) starts the ordering animation and the music.
 - **→**, **Space** or a clicker's next button: next step. **←**: back.
 - **2**, **5**–**9**, **0** (slide 10), **1** (slide 11): jump to a slide's scene.
 - **R**: restart the scene. **N**: presenter notes (what to point at).
@@ -37,6 +38,17 @@ The screen has three parts that always stay in sync:
 - Buttons on the phones work too: **Accept order** and **Request human review** advance the story.
 - Every step has its own link, for example `#slide-7/2`. Old Case Lab links `#01`–`#07` open the matching scene.
 - The page works offline and from `file://`. Map, fonts, rules and data are all local.
+
+### PowerPoint slides inside the page (presenting computer only)
+
+So the whole talk runs in one browser window, the Canva slides can be shown inside the page:
+
+1. In Canva: **Share → See all → Embed → Embed**, and copy the embed link (or the HTML code).
+2. On the presenting computer, open the site with `?ppt` at the end of the address (or press **P**), paste the link and press **Save**.
+
+The link is saved only in that browser (localStorage). The public site and this repository carry no link, so visitors never see the slides. Edit links are refused, because anyone who saw one could change the slides.
+
+Once saved, a **PPT** button appears (key **P**). The handover cards before PowerPoint-only slides (3–4 and 12–15) become a button, and **→** on those cards opens the slides. The clicker turns the slides; **Back to the website** under the slides continues with the next website scene. Canva links cannot open at a given page, so the slides stay loaded in the background and keep their place. The music is paused while the slides show.
 
 ## Scope and evidence boundary
 
@@ -69,3 +81,7 @@ npm test
 ```
 
 The browser check needs Playwright: `npm i -D playwright`, then `npm run test:browser` (add a URL to check the deployed site).
+
+## Credits
+
+The two hands on the phone (slides 2 and 5) come from "Dotted background with hands using a mobile phone", [designed by Freepik](https://www.freepik.com/free-vector/dotted-background-with-hands-using-mobile-phone_1072215.htm), used under Freepik's free licence with attribution (credited in the label beside the hands). The shapes are unchanged; `app/render.js` splits the left hand into the parts behind and in front of the phone. Fonts: Bricolage Grotesque and JetBrains Mono (SIL Open Font Licence).

@@ -16,6 +16,7 @@
   <div class="ctl">
     <button type="button" class="opt icon" id="sound-btn" aria-pressed="true" aria-label="Music and sound" title="Music and sound effects (M)">♪</button>
     <button type="button" class="opt icon" id="loop-btn" aria-pressed="true" aria-label="Loop animations" title="Replay each animation (L)">⟳</button>
+    <button type="button" class="opt" id="ppt-btn" hidden title="Show the PowerPoint slides (P)">PPT</button>
     <button type="button" class="opt" id="notes-btn" aria-pressed="false" title="Presenter notes (N)">Notes</button>
     <button type="button" class="opt" id="restart" title="Restart this scene (R)">Restart</button>
     <button type="button" id="prev" aria-label="Previous step">←</button>
@@ -23,7 +24,7 @@
   </div>
 </header>
 
-<main class="stage">
+<main class="stage" tabindex="-1">
   <section class="head">
     <div class="ppt" id="ppt" aria-live="polite"></div>
     <div>
@@ -52,6 +53,26 @@
 </footer>
 
 <aside class="notes" id="notes" hidden></aside>
+
+<!-- PowerPoint slides inside the page. Only on a computer where a presenter saved a Canva embed link (key P);
+     the public site carries no link, so this layer stays empty for everyone else. -->
+<div class="deck" id="deck" aria-hidden="true">
+  <div class="deck-frame" id="deck-frame"></div>
+  <div class="deck-bar">
+    <span class="hint">PowerPoint slides · the clicker and ← → turn the slides</span>
+    <button type="button" data-act="deck-setup" title="Change or remove the slides link on this computer">Slides link</button>
+    <button type="button" class="go" id="deck-back" data-act="deck-back">Back to the website →</button>
+  </div>
+</div>
+<div class="ds" id="deck-setup" hidden role="dialog" aria-modal="true" aria-labelledby="ds-title">
+  <form class="ds-card" id="ds-form">
+    <h2 id="ds-title">Show the PowerPoint slides inside this page</h2>
+    <p>Paste the Canva <b>embed</b> link of the slides (in Canva: Share → See all → Embed). It is saved only in this browser on this computer and is not part of the public website.</p>
+    <textarea id="ds-input" rows="3" spellcheck="false" aria-label="Canva embed link" placeholder="https://www.canva.com/design/…/view?embed"></textarea>
+    <p class="ds-msg" id="ds-msg" role="alert"></p>
+    <div class="ds-act"><button type="button" id="ds-forget" data-act="ds-forget">Remove link</button><span></span><button type="button" data-act="ds-cancel">Cancel</button><button type="submit" class="go">Save</button></div>
+  </form>
+</div>
 
 <script src="./rtpl-core.js"></script>
 <script src="./app/geo.js"></script>
