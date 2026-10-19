@@ -2,7 +2,7 @@
 (function () {
   'use strict';
   const S = window.RTPLScenes, R = window.RTPLRender, G = window.RTPLGeo, C = window.RTPLCore;
-  const A = window.RTPLMusic || {on: false, unlock() {}, swell() {}, freeze() {}, toggle() { return false; }, onChange() {}};
+  const A = window.RTPLMusic || {on: false, unlock() {}, sfx() {}, freeze() {}, toggle() { return false; }, onChange() {}};
   const $ = id => document.getElementById(id);
   const SCENES = S.SCENES;
   const MAIN = SCENES.filter(s => s.group === 'main');
@@ -80,6 +80,7 @@
   // A Canva embed link saved in this browser's localStorage; the public site carries no link.
   // Canva links cannot open at a given page, so the slides stay loaded (hidden) and keep their place.
   const DECK_KEY = 'rtpl.deck';
+  const DECK_UI = false;   // Canva slides button and P key: off for now
   function deckParse(text) {
     const m = /https:\/\/www\.canva\.com\/design\/([A-Za-z0-9_-]+)\/([A-Za-z0-9_-]+)\/(view|watch|edit)\b/.exec(String(text || ''));
     if (!m) return {error: 'Paste the Canva embed link of the slides (Share → See all → Embed).'};
@@ -99,7 +100,9 @@
       f.id = 'deck-iframe'; f.title = 'PowerPoint slides'; f.allow = 'fullscreen'; f.src = url;
       box.appendChild(f);
     }
-    $('ppt-btn').hidden = !url;
+    // The Canva slides inside the page are switched off for now: the PPT pages are part of the talk itself.
+    // The code stays for later; the button and the P key are hidden (DECK_UI).
+    $('ppt-btn').hidden = !(DECK_UI && url);
     renderGate(); renderChrome();
   }
   function openDeck(from) {
@@ -462,7 +465,7 @@
       anim(img, [{opacity: 0, transform: 'scale(1.035)', filter: 'blur(10px)'}, {opacity: 1, transform: 'scale(1)', filter: 'blur(0)'}], ms);
       pvFront = img.id;
       after(ms, () => { img.style.opacity = 1; old.style.opacity = 0; settle(img); settle(old); free(); });
-      if (!quick) A.swell(400);
+      if (!quick) A.sfx('whoosh', .3);
     });
     setHash();
   }
@@ -481,13 +484,43 @@
       anim(img, [{opacity: 0, transform: 'scale(1.08)', filter: 'blur(12px)'}, {opacity: 1, transform: 'scale(1)', filter: 'blur(0)'}], ms, ms * .25);
       pvFront = img.id;
       after(ms * 1.25, () => { img.style.opacity = 1; settle(img); settle($('pv')); settle($('site')); $('site').classList.add('away'); free(); });
-      if (!quick) A.swell(900);
+      if (!quick) A.sfx('whoosh', .55);
     });
     setHash();
   }
   // PPT page → website: the page opens up and blurs away, a LIVE card names what comes next, and the website
   // grows into place. This is the clear "switch from slides to demo" the tutor asked for.
+  // Where the website screenshot sits on a PPT page (1920 × 1080 image): the zoom-through goes into it.
+  const SHOT = {2: [108, 513, 370, 457], 6: [108, 200, 347, 502]};
+  function fitShot([x, y, w, h]) {
+    const W = innerWidth, H = innerHeight, s = Math.min(W / 1920, H / 1080), ox = (W - 1920 * s) / 2, oy = (H - 1080 * s) / 2;
+    return {left: ox + x * s, top: oy + y * s, width: w * s, height: h * s};
+  }
+  // PPT page → website by flying into the screenshot on the page: the page zooms until the screenshot fills the
+  // screen while the real website grows out of the same spot, then the page fades away. A LIVE badge confirms the switch.
+  function zoomThrough(i, b, n) {
+    st.busy = true;
+    const W = innerWidth, H = innerHeight, r = fitShot(SHOT[n]), img = $(pvFront), site = $('site');
+    const cx = r.left + r.width / 2, cy = r.top + r.height / 2, k = Math.max(W / r.width, H / r.height) * 1.04, s0 = 1 / k;
+    const ms = 1300, zoom = 'cubic-bezier(.7, 0, .2, 1)';
+    A.sfx('whoosh', .85);
+    img.style.transformOrigin = `${cx}px ${cy}px`;
+    img.animate([{transform: 'none', filter: 'blur(0)'}, {transform: `translate(${W / 2 - cx}px, ${H / 2 - cy}px) scale(${k})`, filter: 'blur(3px)'}],
+      {duration: ms, easing: zoom, fill: 'both'});
+    st.pptOn = false; st.entering = true;
+    $('site').classList.remove('away');
+    go(i, b, true);
+    st.entering = false;
+    site.style.transformOrigin = '50% 50%';
+    site.animate([{transform: `translate(${cx - W / 2}px, ${cy - H / 2}px) scale(${s0})`}, {transform: 'none'}], {duration: ms, easing: zoom, fill: 'both'});
+    $('pv').animate([{opacity: 1}, {opacity: 1, offset: .45}, {opacity: 0}], {duration: ms, easing: 'linear', fill: 'both'});
+    const pill = document.createElement('div'); pill.className = 'live-pill'; pill.innerHTML = '<i></i>LIVE PROTOTYPE';
+    document.body.appendChild(pill);
+    after(2600, () => pill.remove());
+    after(ms, () => { $('pv').hidden = true; settle($('pv')); settle(img); img.style.transformOrigin = ''; settle(site); site.style.transformOrigin = ''; free(); });
+  }
   function pptToWeb(i, b, quick) {
+    if (!quick && SHOT[SCENES[i].slide]) return zoomThrough(i, b, SCENES[i].slide);
     st.busy = true;
     const img = $(pvFront), sc = SCENES[i], live = $('live');
     const ms = quick ? 300 : 2000;
@@ -497,7 +530,7 @@
       anim(live, [{opacity: 0, transform: 'translate(-50%, -50%) scale(.9)'}, {opacity: 1, transform: 'translate(-50%, -50%) scale(1)', offset: .3},
         {opacity: 1, transform: 'translate(-50%, -50%) scale(1)', offset: .75}, {opacity: 0, transform: 'translate(-50%, -50%) scale(1.06)'}], ms * 1.1);
       after(ms * 1.1, () => { live.hidden = true; settle(live); });
-      A.swell(1500);
+      A.sfx('whoosh', .75);
     }
     anim(img, [{transform: 'scale(1)', filter: 'blur(0)', opacity: 1}, {transform: 'scale(1.18)', filter: 'blur(16px)', opacity: 0}], ms * .7);
     setTimeout(() => {
@@ -790,6 +823,8 @@
 
   let lastStep = 0;
   document.addEventListener('keydown', e => {
+    // The opening show (splash, film, team) takes the keys until it hands over to PPT page 1.
+    if (window.RTPLStage && window.RTPLStage.active()) { window.RTPLStage.key(e); return; }
     if (!$('deck-setup').hidden) { if (e.key === 'Escape') closeSetup(); return; }
     if (e.target.closest && e.target.closest('input, textarea, select')) return;
     if (e.metaKey || e.ctrlKey || e.altKey) return;
@@ -797,7 +832,7 @@
     const step = k === 'ArrowRight' || k === 'PageDown' || k === ' ' || k === 'ArrowLeft' || k === 'PageUp';
     if (k === 't' || k === 'T') return openTimeline(!st.tl);
     if (k === 'Escape' && st.tl) return openTimeline(false);
-    if (k === 'p' || k === 'P') return st.deck ? (st.deckOpen ? closeDeck(false) : openDeck(st.gate ? 'gate' : 'bar')) : openSetup();
+    if ((k === 'p' || k === 'P') && DECK_UI) return st.deck ? (st.deckOpen ? closeDeck(false) : openDeck(st.gate ? 'gate' : 'bar')) : openSetup();
     // Slides showing but the page has the keyboard (a button was clicked): hand the keys back to the slides.
     if (st.deckOpen) { if (step) { e.preventDefault(); const f = $('deck-iframe'); if (f) f.focus(); } return; }
     if (step) {
@@ -838,6 +873,7 @@
   buildRail();
   soundButton(A.on);
   const pptLink = /^#ppt=(.+)$/.exec(location.hash);   // read before render() rewrites the address
+  const initialHash = location.hash.length > 1;
   st.show = loadShow();
   // Opens on the first item, the cover page; a link to a page (#ppt-6) or a scene (#slide-6/2) still works.
   if (!fromHash()) { st.pptOn = st.show[0][0] === 'p'; st.k = 0; if (!st.pptOn) st.i = SCENES.indexOf(sceneOf(st.show[0])); }
@@ -848,6 +884,8 @@
     render(null, false); clearTimeout(st.loop);
     pvShowNow(pageOf(st.show[st.k])); setHash();
   } else render(null, true);
+  // A fresh visit (no #… in the address) starts with the opening show; ?nointro, ?calm or any link to a page skips it.
+  if (!location.search.includes('nointro') && !CALM && !initialHash && window.RTPLStage) window.RTPLStage.start();
   // PowerPoint slides: a link saved earlier on this computer, a one-click #ppt=<link>, or ?ppt to paste one.
   setDeck(deckSaved());
   if (pptLink) takePptLink(pptLink[1]);

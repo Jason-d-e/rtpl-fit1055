@@ -856,3 +856,57 @@ body.calm .banner { animation: none; }
 .tl-card.w b { font-size: 1.6rem; line-height: 1; color: var(--signal); font-stretch: 78%; }
 .tl-card.w span { font-size: .8rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tl-card.w small { font-size: .66rem; color: #9FAAB5; }
+
+/* ---------- the opening show: splash, film, team, into the cover (app/stage.js) ---------- */
+#show { position: fixed; inset: 0; z-index: 95; background: #05070b; overflow: hidden; color: #fff; }
+#show[hidden] { display: none; }
+.sh-film { position: absolute; inset: 0; opacity: 0; visibility: hidden; }
+.sh-city { position: absolute; inset: 0; width: 100%; height: 100%; }
+.sh-city .route text { fill: #FFC20E; font: 700 26px var(--font); }
+.sh-rider { position: absolute; left: 34%; bottom: 4%; width: min(34vw, 560px); filter: drop-shadow(0 18px 30px rgba(0,0,0,.5)); }
+.rider-svg { width: 100%; height: auto; display: block; overflow: visible; }
+.rider-svg .beam { mix-blend-mode: screen; animation: beam 2.4s ease-in-out infinite; }
+@keyframes beam { 50% { opacity: .65; } }
+.sh-hud { position: absolute; left: 50%; top: 18%; transform: translateX(-50%); width: 90vw; height: 18vh; pointer-events: none; }
+.sh-hud span { position: absolute; left: 50%; top: 0; transform: translateX(-50%); white-space: nowrap; font-weight: 800; font-stretch: 78%; font-size: clamp(2.6rem, 6.4vw, 6.4rem); line-height: 1; opacity: 0; visibility: hidden; }
+.sh-hud .h2 b, .sh-hud .h4 b { color: #FF4A3D; }
+.sh-hud .h3 b { color: #FFC20E; }
+.sh-title { position: absolute; left: 50%; top: 46%; display: flex; flex-direction: column; align-items: center; pointer-events: none; }
+.sh-title b { display: flex; align-items: center; gap: .14em; font-weight: 800; font-stretch: 85%; font-size: clamp(5rem, 15vw, 15rem); line-height: .9; color: #fff; letter-spacing: 0; opacity: 0; visibility: hidden; }
+.sh-title b i { display: inline-block; width: .3em; height: .3em; border-radius: 50%; background: #C8102E; }
+.sh-title span { position: absolute; top: 100%; margin-top: .4em; white-space: nowrap; font-size: clamp(1.2rem, 2.4vw, 2.4rem); color: #FF5A4F; font-style: italic; font-weight: 700; opacity: 0; visibility: hidden; }
+.sh-team { position: absolute; left: 50%; bottom: 9vh; width: min(94vw, 1500px); }
+.sh-tlabel { text-align: center; font-size: clamp(.8rem, 1.1vw, 1.05rem); letter-spacing: .3em; text-transform: uppercase; color: #9FAAB5; margin-bottom: 1.4rem; opacity: 0; visibility: hidden; }
+.sh-cards { display: grid; grid-template-columns: repeat(6, 1fr); gap: 1.1vw; perspective: 900px; }
+.tm { background: linear-gradient(180deg, rgba(30,37,46,.96), rgba(16,20,26,.94)); border: 1px solid rgba(255,255,255,.12); border-top: .3rem solid #FFC20E;
+  border-radius: 1.1rem; padding: 1.2rem .9rem 1.1rem; text-align: center; opacity: 0; visibility: hidden; -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+.tm.lit { border-color: rgba(255,194,14,.55); box-shadow: 0 0 0 1px rgba(255,194,14,.4), 0 30px 70px rgba(255,194,14,.18); }
+.tm-av { position: relative; width: 4.6vw; min-width: 56px; margin: 0 auto .8rem; }
+.tm-av svg { width: 100%; display: block; }
+.tm-av b { position: absolute; left: 0; right: 0; bottom: -.3rem; font-size: .8rem; font-weight: 800; letter-spacing: .08em; }
+.tm h3 { margin: 0; font-size: clamp(1rem, 1.45vw, 1.5rem); font-weight: 800; }
+.tm p { margin: .35rem 0 .45rem; font-size: clamp(.72rem, .9vw, .95rem); color: #C9D1D8; line-height: 1.3; min-height: 2.6em; }
+.tm small { font-size: clamp(.68rem, .8vw, .85rem); color: #FFC20E; font-weight: 700; }
+.sh-flash { position: absolute; inset: 0; background: #fff; opacity: 0; visibility: hidden; pointer-events: none; }
+.sh-cover { position: absolute; inset: 0; background: #f7f8fa; opacity: 0; visibility: hidden; }
+.sh-cover img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.sh-sweep { position: absolute; left: 0; bottom: 6%; width: min(30vw, 480px); opacity: 0; visibility: hidden; filter: drop-shadow(-60px 0 40px rgba(255,194,14,.55)); }
+.sh-splash { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1.4rem;
+  background: radial-gradient(ellipse at 50% 55%, #141a22, #05070b 65%); }
+.sh-go { border: 0; background: none; padding: 0; width: min(26vw, 380px); cursor: pointer; filter: drop-shadow(0 0 40px rgba(255,194,14,.25)); animation: breathe 3.2s ease-in-out infinite; }
+.sh-go .beam { opacity: .5; }
+@keyframes breathe { 50% { filter: drop-shadow(0 0 70px rgba(255,194,14,.5)); transform: scale(1.03); } }
+.sh-go:focus-visible { outline: 3px solid #FFC20E; outline-offset: 12px; border-radius: 1rem; }
+.sh-splash p { margin: 0; font-size: .95rem; letter-spacing: .35em; text-transform: uppercase; color: #6E7A86; }
+.sh-pick { position: absolute; left: 1.2rem; bottom: 1rem; display: flex; gap: .4rem; align-items: center; opacity: .35; transition: opacity .3s; }
+.sh-pick:hover { opacity: 1; }
+.sh-pick span { font-size: .72rem; color: #8995A1; margin-right: .3rem; letter-spacing: .08em; text-transform: uppercase; }
+.sh-pick button { border: 1px solid #333c46; background: transparent; color: #C9D1D8; border-radius: .6rem; padding: .3rem .6rem; font-size: .78rem; text-align: left; line-height: 1.15; }
+.sh-pick button small { display: block; font-size: .64rem; color: #6E7A86; }
+.sh-pick button.on { border-color: #FFC20E; color: #FFC20E; }
+.sh-hint { position: absolute; right: 1.2rem; bottom: 1rem; font-size: .78rem; color: #4E5864; letter-spacing: .05em; }
+.live-pill { position: fixed; left: 50%; top: 1rem; z-index: 96; transform: translateX(-50%); display: flex; align-items: center; gap: .6rem; padding: .55rem 1.3rem;
+  border-radius: 999px; background: rgba(12, 15, 18, .88); color: #fff; font-weight: 800; letter-spacing: .12em; font-size: 1rem; box-shadow: 0 14px 40px rgba(0,0,0,.35);
+  pointer-events: none; animation: pill 2.6s ease both; }
+.live-pill i { width: .7rem; height: .7rem; border-radius: 50%; background: #E1251B; animation: livedot 1.2s ease-out infinite; }
+@keyframes pill { 0% { opacity: 0; transform: translate(-50%, -20px); } 12%, 80% { opacity: 1; transform: translate(-50%, 0); } 100% { opacity: 0; transform: translate(-50%, -10px); } }

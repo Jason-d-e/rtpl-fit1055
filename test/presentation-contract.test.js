@@ -13,14 +13,18 @@ const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 const S = require('../app/scenes.js');
 
 test('The page loads the single rules core before every interface script', () => {
-  const order = ['./rtpl-core.js', './app/geo.js', './app/scenes.js', './app/render.js', './app/music.js', './app/main.js'];
+  const order = ['./rtpl-core.js', './app/geo.js', './app/scenes.js', './app/render.js', './assets/vendor/gsap.min.js', './app/music.js', './app/stage.js', './app/main.js'];
   const at = order.map(src => html.indexOf(`<script src="${src}"></script>`));
   assert.ok(at.every(i => i > 0), 'all scripts present');
   assert.deepEqual([...at].sort((a, b) => a - b), at, 'scripts load in dependency order');
   const music = fs.readFileSync(path.join(root, 'app/music.js'), 'utf8');
   for (const api of ['fetch(', 'XMLHttpRequest', 'localStorage', 'http://']) assert.equal(music.includes(api), false, `music.js must not use ${api}`);
-  assert.match(music, /SRC = '\.\/assets\/music\/higher-up\.mp3'/, 'the track is a local file');
-  for (const f of ['app/geo.js', 'app/scenes.js', 'app/render.js', 'app/music.js', 'app/main.js']) {
+  for (const m of music.matchAll(/src: '([^']+)'|: '(\.\/assets\/sfx\/[^']+)'/g)) {
+    const f = m[1] || m[2];
+    assert.ok(f.startsWith('./assets/'), f + ' is a local file');
+    assert.ok(fs.existsSync(path.join(root, f)), f + ' exists');
+  }
+  for (const f of ['app/geo.js', 'app/scenes.js', 'app/render.js', 'app/music.js', 'app/stage.js', 'app/main.js']) {
     const src = fs.readFileSync(path.join(root, f), 'utf8');
     assert.equal(src.includes('function budget('), false, `${f} must not re-implement the rules`);
   }
@@ -120,6 +124,6 @@ test('The talk plays every PPT page in order, each website scene right after its
 
 test('The music is the credited CC BY track, and no synthesised sound is left', () => {
   assert.ok(fs.existsSync(path.join(root, 'assets/music/higher-up.mp3')));
-  assert.ok(html.includes('silvermansound.com'), 'credit in the footer');
+  assert.ok(html.includes('silvermansound.com') && html.includes('Kevin MacLeod') && html.includes('Sascha Ende'), 'credits in the footer');
   assert.equal(fs.existsSync(path.join(root, 'app/sound.js')), false);
 });

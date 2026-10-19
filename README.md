@@ -36,7 +36,8 @@ The screen has three parts that always stay in sync:
 - **2**, **5**–**9**, **0** (slide 10), **1** (slide 11): jump to a slide's scene.
 - **R**: restart the scene. **N**: presenter notes (what to point at).
 - **Pause** button, **K**, or a clicker's blank-screen button (it sends **B** or **.**): freeze the current animation and music where they are; again to resume. Any step key also resumes.
-- **M**: music on or off. The music swells during each transition and fades out while someone speaks. It starts after the first key press or click. **L**: looping animations on or off.
+- A fresh visit opens with a stage show: a black screen with one rider icon (click it or press **→**), a 15-second opening film timed to the music's drop, then the team walk-on (each **→** spotlights the next member), and a rider sweeps the scene into PPT page 1. **S** skips the opening; a link with `#…` or `?nointro` starts without it. The opening track can be chosen at the bottom left of the start screen.
+- **M**: music on or off. Music plays only in the opening; it ducks under the team's voices and ends on the song's own last chord. Transitions use short sound effects. **L**: looping animations on or off.
 - The footer badge shows who is presenting; a name card slides in at each handover.
 - Buttons on the phones work too: **Accept order** and **Request human review** advance the story.
 - Every step has its own link, for example `#slide-7/2`. Old Case Lab links `#01`–`#07` open the matching scene.
@@ -69,7 +70,8 @@ Once saved, a **PPT** button appears (key **P**). The handover cards before Powe
 | `app/scenes.js` | Fixed synthetic inputs and every scene/step. All displayed numbers are computed here by `rtpl-core.js`. |
 | `app/geo.js` | The synthetic city: streets, places and route paths. |
 | `app/render.js` | Pure HTML renderers for the phones, map, console and boards. No policy logic. |
-| `app/music.js` | Transition music: one CC BY track (`assets/music/higher-up.mp3`) that swells during transitions. |
+| `app/music.js` | Opening music (four CC BY candidates in `assets/music/`) and CC0 sound effects (`assets/sfx/`). |
+| `app/stage.js` | The opening show: rider splash, opening film on the beat, team walk-on and the sweep into PPT page 1 (GSAP, `assets/vendor/`). |
 | `assets/slides/` | The 15 PPT pages as WebP images (and small thumbnails for the timeline), exported from the Canva deck. |
 | `app/main.js` | Presenter controller: keyboard, links, animation loops, reviewer desk, download, Sandbox. |
 | `assets/` | Stylesheet and the two local fonts (Bricolage Grotesque, JetBrains Mono; SIL Open Font Licence). |
@@ -88,4 +90,4 @@ The browser check needs Playwright: `npm i -D playwright`, then `npm run test:br
 
 ## Credits
 
-The two hands on the phone (slides 2 and 5) come from "Dotted background with hands using a mobile phone", [designed by Freepik](https://www.freepik.com/free-vector/dotted-background-with-hands-using-mobile-phone_1072215.htm), used under Freepik's free licence with attribution (credited in the label beside the hands). The shapes are unchanged; `app/render.js` splits the left hand into the parts behind and in front of the phone. Fonts: Bricolage Grotesque and JetBrains Mono (SIL Open Font Licence). Music: "Higher Up" by Shane Ivers (https://www.silvermansound.com), licensed under CC BY 4.0. Photos on the PPT pages: Wikimedia Commons, credited in the PPT notes.
+The two hands on the phone (slides 2 and 5) come from "Dotted background with hands using a mobile phone", [designed by Freepik](https://www.freepik.com/free-vector/dotted-background-with-hands-using-mobile-phone_1072215.htm), used under Freepik's free licence with attribution (credited in the label beside the hands). The shapes are unchanged; `app/render.js` splits the left hand into the parts behind and in front of the phone. Fonts: Bricolage Grotesque and JetBrains Mono (SIL Open Font Licence). Opening music (one is chosen on the start screen), all licensed under CC BY 4.0: "Higher Up" by Shane Ivers (https://www.silvermansound.com); "Epic Intro 2019" by Sascha Ende (https://ende.app); "Volatile Reaction" and "Hyperfun" by Kevin MacLeod (https://incompetech.com). Sound effects, CC0: "Air woosh move" by Almitory (OpenGameArt) and Impact Sounds by Kenney (https://kenney.nl). Animation: GSAP 3.13 (https://gsap.com), used under its standard no-charge licence. Photos on the PPT pages: Wikimedia Commons, credited in the PPT notes.
