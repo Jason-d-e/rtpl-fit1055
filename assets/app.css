@@ -692,32 +692,36 @@ body.calm .banner { animation: none; }
 .ap-steps li.now i { background: var(--app); color: #fff; }
 
 /* slide 5: the same order on two phones, without and with RTPL */
-.hp2 { display: grid; grid-template-columns: auto auto auto; justify-content: center; column-gap: clamp(2rem, 7vw, 9rem); align-items: center; justify-items: center; padding: 1.2% 4% 2.4rem; perspective: 1600px; }
-.hp2-col { margin: 0; display: flex; flex-direction: column; align-items: center; gap: .7rem; }
-.hp2-col figcaption { text-align: center; }
-.hp2-col figcaption b { display: block; font-size: 1.45rem; font-weight: 800; font-stretch: 85%; }
-.hp2-col figcaption small { font-size: .85rem; color: var(--muted); }
+.hp2 { --zoom: 1.4s; }
+.hp2-stage { position: absolute; inset: 0; display: grid; grid-template-columns: auto auto auto; justify-content: center; column-gap: clamp(1.5rem, 5vw, 6rem); align-items: center; justify-items: center; padding: .8rem 4% 1.8rem; perspective: 1600px; transform-origin: 0 0; transition: transform var(--zoom) cubic-bezier(.6,0,.2,1); }
+.hp2-col { position: relative; margin: 0; display: flex; flex-direction: column; align-items: center; gap: .45rem; }
+.hp2-col figcaption { display: flex; align-items: baseline; gap: .5rem; white-space: nowrap; }
+.hp2-col figcaption b { font-size: 1.3rem; font-weight: 800; font-stretch: 85%; }
+.hp2-col figcaption small { font-size: .8rem; color: var(--muted); }
 .hp2-col.without figcaption b { color: var(--ai); }
 .hp2-col.with figcaption b { color: var(--protect); }
-.hp2-phone { height: calc(var(--floor-h) * .66); aspect-ratio: .49; background: var(--asphalt); border-radius: 13% / 6.3%; padding: 2.6%; box-shadow: 0 24px 50px rgba(20, 30, 40, .28); transition: box-shadow .6s, transform .8s cubic-bezier(.3,0,.2,1); }
-.hp2-col.without .hp2-phone { transform: rotateY(10deg); }
-.hp2-col.with .hp2-phone { transform: rotateY(-10deg); }
-.hp2-screen { font-size: calc(var(--floor-h) * .0198); }
+.hp2-phone { height: calc(var(--floor-h) * .84); aspect-ratio: .49; background: var(--asphalt); border-radius: 13% / 6.3%; padding: 2.6%; box-shadow: 0 24px 50px rgba(20, 30, 40, .28); transition: box-shadow .6s, transform .8s cubic-bezier(.3,0,.2,1); }
+.hp2-col.without .hp2-phone { transform: rotateY(8deg); }
+.hp2-col.with .hp2-phone { transform: rotateY(-8deg); }
+.hp2.zoom .hp2-phone { transform: none; }
+.hp2-screen { font-size: calc(var(--floor-h) * .0252); }
 .hp2.done .without .hp2-phone { box-shadow: 0 0 0 4px var(--ai), 0 24px 50px rgba(226, 85, 47, .35); }
-.hp2.done .with .hp2-phone { box-shadow: 0 0 0 4px var(--protect), 0 24px 50px rgba(13, 122, 100, .35); transform: rotateY(-4deg) scale(1.03); }
-.hp2-verdict { margin: 0; font-size: 1rem; font-weight: 600; padding: .45rem 1rem; border-radius: 999px; opacity: 0; transform: translateY(12px); transition: opacity .5s, transform .5s cubic-bezier(.2,.9,.3,1.3); }
+.hp2.done .with .hp2-phone { box-shadow: 0 0 0 4px var(--protect), 0 24px 50px rgba(13, 122, 100, .35); }
+/* the verdict hangs just under each phone's time card (top set by main.js), and grows with the zoom */
+.hp2-verdict { position: absolute; left: 50%; top: var(--vt, 40%); z-index: 2; margin: 0; white-space: nowrap; font-size: 1rem; font-weight: 600; padding: .45rem 1rem; border-radius: 999px; opacity: 0; transform: translate(-50%, 12px); transition: opacity .5s, transform .5s cubic-bezier(.2,.9,.3,1.3); }
 .hp2-verdict b { font-weight: 800; }
-.without .hp2-verdict { background: var(--ai-soft); color: #9C2F12; }
-.with .hp2-verdict { background: var(--protect-soft); color: var(--protect); }
-.hp2.done .hp2-verdict { opacity: 1; transform: none; }
-.hp2.done .with .hp2-verdict { transition-delay: .25s; }
-.hp2-vs { width: 3.2rem; height: 3.2rem; border-radius: 50%; background: var(--asphalt); color: #fff; display: grid; place-items: center; font-weight: 800; font-size: 1.05rem; margin-top: -2rem; }
+.without .hp2-verdict { background: #FFF1EC; color: #9C2F12; box-shadow: 0 0 0 2px var(--ai), 0 10px 24px rgba(20, 30, 40, .22); }
+.with .hp2-verdict { background: #E9F7F2; color: var(--protect); box-shadow: 0 0 0 2px var(--protect), 0 10px 24px rgba(20, 30, 40, .22); }
+.hp2.say .hp2-verdict { opacity: 1; transform: translate(-50%, 0); }
+.hp2.say .with .hp2-verdict { transition-delay: .25s; }
+.hp2-vs { width: 3.2rem; height: 3.2rem; border-radius: 50%; background: var(--asphalt); color: #fff; display: grid; place-items: center; font-weight: 800; font-size: 1.05rem; }
 .ap-eta.ai.on b { color: #FF8A6B; }
 .ap-eta.ai span { color: #FF8A6B; }
 .ap-eta.ai.on { animation: etaAi .9s ease; }
 @keyframes etaAi { 0% { background: var(--ai); } 100% { background: var(--asphalt); } }
 @media (max-width: 900px) {
-  .hp2 { grid-template-columns: 1fr 1fr; gap: .8rem; padding: 1rem .6rem 3.4rem; align-items: start; }
+  .hp2-stage { position: static; grid-template-columns: 1fr 1fr; gap: .8rem; padding: 1rem .6rem 3.4rem; align-items: start; transform: none !important; }
+  .hp2-col figcaption { flex-direction: column; align-items: center; gap: 0; white-space: normal; text-align: center; }
   .hp2-col figcaption small { display: block; min-height: 2.5em; }
   .hp2-vs { display: none; }
   .hp2-col { width: 100%; }
@@ -725,7 +729,7 @@ body.calm .banner { animation: none; }
   .hp2-col figcaption small { font-size: .72rem; }
   .hp2-phone { height: auto; width: 100%; transform: none !important; }
   .hp2-screen { aspect-ratio: .47; font-size: calc((100vw - 3rem) / 2 * .056); }
-  .hp2-verdict { font-size: .78rem; text-align: center; border-radius: .8rem; }
+  .hp2-verdict { position: static; transform: none !important; white-space: normal; font-size: .78rem; text-align: center; border-radius: .8rem; }
 }
 
 /* the platform backend beside it (slide 2) */

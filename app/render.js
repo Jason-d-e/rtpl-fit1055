@@ -347,10 +347,10 @@
     const col = (v, label, sub, hh, verdict) => `<figure class="hp2-col ${v}"><figcaption><b>${label}</b><small>${sub}</small></figcaption>
       <div class="hp2-phone"><div class="hp-screen hp2-screen" data-v="${v}">${apScreen('status', hh)}</div></div>
       <p class="hp2-verdict">${verdict}</p></figure>`;
-    return `<div class="hp hp2" id="hp">
+    return `<div class="hp hp2" id="hp"><div class="hp2-stage" id="hp2-stage">
       ${col('without', 'Without RTPL', 'If the AI’s time went straight to the app', aiView(h), `<b>${clock(h.ai)}</b> needs ${h.speed.need} km/h for ${h.speed.km} km`)}
       <div class="hp2-vs">vs</div>
-      ${col('with', 'With RTPL', 'What the customer really sees', h, `<b>${clock(h.deadline)}</b> works at the legal ${h.speed.legal} km/h`)}
+      ${col('with', 'With RTPL', 'What the customer really sees', h, `<b>${clock(h.deadline)}</b> works at the legal ${h.speed.legal} km/h`)}</div>
       <div class="hp-tag">Invented app, shop and address · the same order A101 on both phones</div></div>`;
   }
 

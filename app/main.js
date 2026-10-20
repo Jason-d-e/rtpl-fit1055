@@ -345,16 +345,43 @@
   }
   function clearTimers() { st.timers.forEach(t => clearTimeout(t.id)); st.timers = []; }
 
+  // Slide 5: scale the two phones about their time cards so both times fill the middle of the screen.
+  // Positions come from layout offsets (not screen boxes), so the phones' tilt and the zoom itself do not skew them.
+  function zoomTimes(hp, quick) {
+    const stage = hp.querySelector('#hp2-stage'), etas = [...hp.querySelectorAll('.ap-eta')];
+    if (!stage || etas.length < 2 || innerWidth <= 900) return;
+    const at = el => { let x = 0, y = 0; for (let e = el; e && e !== stage; e = e.offsetParent) { x += e.offsetLeft; y += e.offsetTop; } return [x, y]; };
+    const [a, b] = etas.map(e => { const [x, y] = at(e); return {x, y, w: e.offsetWidth, h: e.offsetHeight}; });
+    // Each verdict hangs just under its own time card.
+    hp.querySelectorAll('.hp2-col').forEach((col, i) => {
+      const e = etas[i], [, y] = at(e), [, cy] = at(col);
+      col.style.setProperty('--vt', (y - cy + e.offsetHeight + 14) + 'px');
+    });
+    // Frame: from the Without/With labels down to the verdicts under the time cards.
+    const top = Math.min(...[...hp.querySelectorAll('.hp2-col figcaption')].map(f => at(f)[1]));
+    const ux = a.x, uy = top, uw = b.x + b.w - a.x, uh = Math.max(a.y + a.h, b.y + b.h) + 64 - uy;
+    const W = hp.clientWidth, H = hp.clientHeight, k = Math.min(1.75, W * .9 / uw, H * .9 / uh);
+    if (k <= 1.02) return;
+    const tx = W / 2 - k * (ux + uw / 2), ty = H * .5 - k * (uy + uh / 2);
+    if (quick) stage.style.transition = 'none';
+    hp.classList.add('zoom');
+    stage.style.transform = `translate(${tx.toFixed(1)}px, ${ty.toFixed(1)}px) scale(${k.toFixed(3)})`;
+    if (quick) { void stage.offsetWidth; stage.style.transition = ''; }
+  }
+
   function handFx(h, prev, animate) {
     const hp = $('hp'), cam = $('hp-cam'), dev = $('hp-dev'), scr = $('hp-screen'), finger = $('hp-finger');
     if (!hp) return;
     if (h.script === 'compare') {
-      // Two phones, one order: the four steps run on both together, then each time gets its verdict.
+      // Two phones, one order: the four steps run on both together, the two times land, then the camera
+      // moves in on the two time cards and each gets its verdict. It plays once and stays there (no loop).
       const screens = [...hp.querySelectorAll('.hp2-screen')];
       const show = n => screens.forEach(el => { el.innerHTML = R.apScreen('status', el.dataset.v === 'without' ? R.aiView(h) : h, n); });
-      if (st.hold || !animate || reduced()) { hp.classList.add('done'); return; }
+      if (st.hold || !animate || reduced()) { hp.classList.add('done', 'say'); zoomTimes(hp, true); return; }
       [1, 2, 3, 4].forEach((n, i) => later(i * 1300, () => show(n)));
-      later(3 * 1300 + 1000, () => { hp.classList.add('done'); A.sfx('tap', .5); });
+      later(3 * 1300 + 900, () => { hp.classList.add('done'); A.sfx('tap', .5); });
+      later(3 * 1300 + 1700, () => { zoomTimes(hp, false); A.sfx('whoosh', .35); });
+      later(3 * 1300 + 3100, () => hp.classList.add('say'));
       return;
     }
     const show = (name, arg) => { scr.innerHTML = R.apScreen(name, h, arg); };
@@ -652,7 +679,7 @@
   /* ---------- looping: every step replays its animation after a pause to read it ---------- */
   function cycleFor(b) {
     if (b.center === 'sandbox') return 0;
-    if (b.center === 'handphone') return b.hand.script === 'compare' ? 10000 : b.hand.stage === 0 ? 14000 : 8500;
+    if (b.center === 'handphone') return b.hand.script === 'compare' ? 0 : b.hand.stage === 0 ? 14000 : 8500;
     return b.center === 'map' ? 7500 : 7000;
   }
   function scheduleLoop() {
