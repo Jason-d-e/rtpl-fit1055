@@ -295,10 +295,10 @@
         <div class="ap-box ap-ticket" id="ap-ticket"><small>${esc(o.restaurant)} → ${esc(o.drop)}</small>${o.items.map(([n, q]) => `<b>${q} × ${esc(n)}</b>`).join('')}</div>
         <p class="ap-note">Sending to the restaurant and the delivery platform…</p>`;
     } else if (name === 'status') {
-      const n = arg === undefined ? STATUS.length : arg, done = n >= STATUS.length;
+      const n = arg === undefined ? STATUS.length : arg, done = n >= STATUS.length, ai = h.variant === 'ai';
       time = n ? STATUS[n - 1][1] : 0;
       body = `<div class="ap-mhead"><div><b>Order ${esc(o.id)}</b><small>${esc(o.restaurant)} → ${esc(o.drop)}</small></div></div>
-        <div class="ap-eta ${done ? 'on' : ''}"><small>${done ? 'Arrives by' : 'Arrival time'}</small><b>${done ? clock(h.deadline) : 'Confirming…'}</b>${done ? `<span>${AI.check} Time checked</span>` : ''}</div>
+        <div class="ap-eta ${done ? 'on' : ''} ${ai ? 'ai' : ''}"><small>${done ? 'Arrives by' : 'Arrival time'}</small><b>${done ? clock(h.deadline) : 'Confirming…'}</b>${done ? (ai ? '<span>AI estimate · not checked</span>' : `<span>${AI.check} Time checked</span>`) : ''}</div>
         <ol class="ap-steps">${STATUS.slice(0, n).map(([t, m], i) => `<li class="${i === n - 1 ? 'now' : ''}"><i>${AI.check}</i><span>${t}</span><small>${clock(m)}</small></li>`).join('')}</ol>
         <div class="ap-box"><small>Your order</small>${o.items.map(([nm, q]) => `<b>${q} × ${esc(nm)}</b>`).join('')}</div>`;
     }
@@ -340,7 +340,22 @@
       <div class="be-ai"><small>AI suggests delivery by</small><b>${clock(h.ai)}</b><span>only ${h.ai} min</span></div>${real}</div>`;
   }
 
+  // Slide 5: the same order on two phones. Left: what the app would show if the AI's time went straight out
+  // (no customer sees this with RTPL). Right: the checked time the customer really gets.
+  const aiView = h => ({...h, deadline: h.ai, variant: 'ai'});
+  function comparePhones(h) {
+    const col = (v, label, sub, hh, verdict) => `<figure class="hp2-col ${v}"><figcaption><b>${label}</b><small>${sub}</small></figcaption>
+      <div class="hp2-phone"><div class="hp-screen hp2-screen" data-v="${v}">${apScreen('status', hh)}</div></div>
+      <p class="hp2-verdict">${verdict}</p></figure>`;
+    return `<div class="hp hp2" id="hp">
+      ${col('without', 'Without RTPL', 'If the AI’s time went straight to the app', aiView(h), `<b>${clock(h.ai)}</b> needs ${h.speed.need} km/h for ${h.speed.km} km`)}
+      <div class="hp2-vs">vs</div>
+      ${col('with', 'With RTPL', 'What the customer really sees', h, `<b>${clock(h.deadline)}</b> works at the legal ${h.speed.legal} km/h`)}
+      <div class="hp-tag">Invented app, shop and address · the same order A101 on both phones</div></div>`;
+  }
+
   function handPhone(h) {
+    if (h.script === 'compare') return comparePhones(h);
     const side = h.script === 'order' && h.stage >= 1;
     const screen = h.script === 'order' ? apScreen('paid', h) : apScreen('status', h);
     return `<div class="hp ${side ? 'with-side' : ''}" id="hp"><div class="hp-cam ${side ? '' : 'mid'}" id="hp-cam"><div class="hp-dev" id="hp-dev">${PALM}
@@ -501,5 +516,5 @@
     </div>`;
   }
 
-  root.RTPLRender = {esc, pptBadge, pptFlash, gate, handPhone, apScreen, speedo, riderPhone, customerPhone, mapHtml, engine, overview, compare, review, audit, sandboxForm, sandboxOut, jsonHtml};
+  root.RTPLRender = {esc, pptBadge, pptFlash, gate, handPhone, apScreen, aiView, speedo, riderPhone, customerPhone, mapHtml, engine, overview, compare, review, audit, sandboxForm, sandboxOut, jsonHtml};
 })(typeof globalThis !== 'undefined' ? globalThis : this);

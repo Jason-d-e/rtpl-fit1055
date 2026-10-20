@@ -43,6 +43,14 @@ test('Slide 5: the customer app shows the checked 12:34, never the AI time', () 
   assert.ok(!R.apScreen('status', h, 3).includes('12:34'), 'no time before the rider is assigned');
 });
 
+test('Slide 5: the AI time appears only on the phone labelled Without RTPL', () => {
+  const h = beat('slide-5', 0).hand, html = R.handPhone(h);
+  assert.equal(h.script, 'compare');
+  const [without, withRtpl] = html.split('class="hp2-vs"');
+  assert.ok(without.includes('Without RTPL') && without.includes('12:24') && without.includes('not checked'));
+  assert.ok(withRtpl.includes('With RTPL') && withRtpl.includes('12:34') && !withRtpl.includes('12:24'));
+});
+
 test('Slide 6: the AI proposal is extended to the checked floor and published to both apps', () => {
   const b = beat('slide-6', 1);
   assert.equal(b.engine.res.deadline, 34);
@@ -114,7 +122,7 @@ test('Every beat of every scene renders without throwing', () => {
     if (b.map) assert.ok(R.mapHtml(b.map, b.time, null).includes('id="rider"'));
     if (b.engine) assert.ok(R.engine(b.engine).includes('class="engine"'));
     if (b.overview) assert.ok(R.overview(b.overview).includes('ov-rtpl'));
-    if (b.hand) assert.ok(R.handPhone(b.hand).includes('id="hp-screen"'));
+    if (b.hand) assert.ok(R.handPhone(b.hand).includes(b.hand.script === 'compare' ? 'hp2-screen' : 'id="hp-screen"'));
     if (b.compare) assert.ok(R.compare(b.compare).includes('casecard'));
     if (b.review) assert.ok(R.review(b.review, {}).includes('fx-card'));
     if (b.audit) assert.ok(R.audit(b.audit).includes('audit-json'));

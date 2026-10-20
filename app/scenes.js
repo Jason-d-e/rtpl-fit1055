@@ -209,9 +209,9 @@
 
     {id: 'slide-5', slide: 5, presenter: 'Yanyu Zhu', title: 'Where RTPL sits', short: 'Overview', group: 'main',
       beats: [
-        {time: 2, center: 'handphone', solo: true, hand: hand('status', 0),
-          caption: 'The customer has paid. The app shows each step, and an arrival time of 12:34, not the AI’s 12:24. Why?',
-          note: 'Let the four steps appear. Point at 12:34. Press → to look behind the screen.'},
+        {time: 2, center: 'handphone', solo: true, hand: hand('compare', 0), result: 'Same order: 12:24 unchecked, 12:34 checked',
+          caption: 'The customer has paid and a rider is found. With RTPL the app shows 12:34, not the AI’s 12:24. Why?',
+          note: 'Both phones run the same order. Point at 12:24 on the left (what the AI alone would send), then 12:34 on the right. Press → to look behind the screen.'},
         {time: 0, center: 'overview', solo: true, overview: {stage: 1, ai: AI_PROPOSED, out: CHECK01.deadline}, result: 'The AI’s 12:24 goes in. A checked 12:34 comes out.',
           caption: 'Behind the screen, RTPL sits between the AI and the apps. It checks three times: before the rider gets a time, after delivery, and if the rider disagrees.',
           note: 'Point at the AI box, the three RTPL steps, then the apps. Next: step 1 on the map.'}

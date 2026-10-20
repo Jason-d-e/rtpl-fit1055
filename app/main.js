@@ -345,6 +345,15 @@
   function handFx(h, prev, animate) {
     const hp = $('hp'), cam = $('hp-cam'), dev = $('hp-dev'), scr = $('hp-screen'), finger = $('hp-finger');
     if (!hp) return;
+    if (h.script === 'compare') {
+      // Two phones, one order: the four steps run on both together, then each time gets its verdict.
+      const screens = [...hp.querySelectorAll('.hp2-screen')];
+      const show = n => screens.forEach(el => { el.innerHTML = R.apScreen('status', el.dataset.v === 'without' ? R.aiView(h) : h, n); });
+      if (st.hold || !animate || reduced()) { hp.classList.add('done'); return; }
+      [1, 2, 3, 4].forEach((n, i) => later(i * 1300, () => show(n)));
+      later(3 * 1300 + 1000, () => { hp.classList.add('done'); A.sfx('tap', .5); });
+      return;
+    }
     const show = (name, arg) => { scr.innerHTML = R.apScreen(name, h, arg); };
     // Position inside the (possibly zoomed) device, in unscaled device pixels.
     const local = el => {
@@ -640,7 +649,7 @@
   /* ---------- looping: every step replays its animation after a pause to read it ---------- */
   function cycleFor(b) {
     if (b.center === 'sandbox') return 0;
-    if (b.center === 'handphone') return b.hand.script === 'status' ? 9000 : b.hand.stage === 0 ? 14000 : 8500;
+    if (b.center === 'handphone') return b.hand.script === 'compare' ? 10000 : b.hand.stage === 0 ? 14000 : 8500;
     return b.center === 'map' ? 7500 : 7000;
   }
   function scheduleLoop() {
