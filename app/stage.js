@@ -2,8 +2,8 @@
  *   0  splash   — black screen, one rider icon. A click or → starts the show.
  *   1  film     — a night city, a rider rides in, the order's route and times flash up on the beat,
  *                 and the title RTPL lands on the music's drop (about 15 s).
- *   2  team     — six cards arrive on the beat. Each → puts the next member in the spotlight while they
- *                 introduce themselves; the music drops low under their voices.
+ *   2  team     — six cards arrive on the beat, dimmed. Two bars later they flip and light up together
+ *                 by themselves (→ does it at once), and the music drops low while the members introduce themselves.
  *   3  cover    — a rider sweeps across and the night scene wipes into PPT page 1; the title and names fly
  *                 to where they sit on that page, and the song plays its own ending.
  * After that the normal sequence (PPT pages and website scenes) carries on. Synthetic story only.
@@ -157,7 +157,9 @@
       .to('#sh-hud', {autoAlpha: 0, duration: .3}, T)
       .fromTo('.sh-tlabel', {autoAlpha: 0, y: 20}, {autoAlpha: 1, y: 0, duration: .6}, T + .6)
       .fromTo('.tm', {autoAlpha: 0, y: 80, rotationX: -40}, {autoAlpha: 1, y: 0, rotationX: 0, duration: .7, ease: 'back.out(1.6)', stagger: beat}, T + 4 * beat)
-      .call(() => { ST.phase = 'team'; teamIdle(); hint('→ the whole team, together'); }, null, T + 4 * beat + 6 * beat);
+      .call(() => { ST.phase = 'team'; teamIdle(); }, null, T + 4 * beat + 6 * beat)
+      // Two bars after the last card lands, the whole team lights up on its own.
+      .call(() => { if (ST.phase === 'team') teamTogether(); }, null, T + 4 * beat + 6 * beat + 8 * beat);
     // Run the timeline on the music's clock, so the picture stays on the beat (or on the wall clock without sound).
     const t0 = performance.now();
     const tick = () => {
@@ -168,7 +170,7 @@
     ST.raf = requestAnimationFrame(tick);
   }
 
-  /* ---------- 2 team: the cards float; one → lights the whole team at once ---------- */
+  /* ---------- 2 team: the cards float, then light up together (on their own, or at once with →) ---------- */
   function teamIdle() {
     if (ST.idle) ST.idle.kill();
     ST.idle = gsap.to('.tm', {y: -10, duration: 1.4, yoyo: true, repeat: -1, ease: 'sine.inOut', stagger: {each: .22, repeat: -1, yoyo: true}});
