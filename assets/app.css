@@ -283,6 +283,8 @@ button.g-ppt:hover { background: #36414C; }
 .track { position: relative; height: 2.1rem; background: #28313A; border-radius: .5rem; }
 .seg { position: absolute; top: 0; bottom: 0; display: flex; align-items: center; justify-content: center; font-size: .72rem; font-weight: 700; overflow: hidden; white-space: nowrap; transition: width .55s cubic-bezier(.3,.8,.3,1), left .55s cubic-bezier(.3,.8,.3,1); border-right: 2px solid var(--asphalt); }
 .seg span { padding: 0 .3rem; overflow: hidden; text-overflow: ellipsis; }
+.seg span em { font-style: normal; }
+.seg.short em { display: none; }
 .seg.ai { background: var(--ai); color: #fff; border-radius: .5rem; border: 0; }
 .seg.p0 { background: #FFC20E; color: var(--asphalt); border-radius: .5rem 0 0 .5rem; }
 .seg.p1 { background: #F4D166; color: var(--asphalt); }

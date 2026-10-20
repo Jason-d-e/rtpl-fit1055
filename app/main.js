@@ -277,6 +277,9 @@
   function bars(grow) {
     document.querySelectorAll('.seg[data-w]').forEach(el => {
       const w = el.dataset.w + '%';
+      // A part too narrow for its name shows only its minutes; the sum line below names every part.
+      const sp = el.querySelector('span');
+      if (sp && sp.querySelector('em')) el.classList.toggle('short', sp.scrollWidth + 4 > el.parentElement.clientWidth * parseFloat(el.dataset.w) / 100);
       if (!grow || reduced()) { el.style.transition = 'none'; el.style.width = w; return; }
       requestAnimationFrame(() => requestAnimationFrame(() => { el.style.width = w; }));
     });
@@ -508,7 +511,7 @@
   // PPT page → website: the page opens up and blurs away, a LIVE card names what comes next, and the website
   // grows into place. This is the clear "switch from slides to demo" the tutor asked for.
   // Where the website screenshot sits on a PPT page (1920 × 1080 image): the zoom-through goes into it.
-  const SHOT = {2: [108, 513, 370, 457], 6: [108, 200, 347, 502]};
+  const SHOT = {2: [108, 513, 733, 458], 6: [108, 200, 347, 502]};
   function fitShot([x, y, w, h]) {
     const W = innerWidth, H = innerHeight, s = Math.min(W / 1920, H / 1080), ox = (W - 1920 * s) / 2, oy = (H - 1080 * s) / 2;
     return {left: ox + x * s, top: oy + y * s, width: w * s, height: h * s};

@@ -186,14 +186,14 @@
       <p class="src">Values come from this run of <code>rtpl-core.js</code>. Highlighted lines decided the result.</p></div>`;
   }
 
-  const SEG_NAMES = ['Ride', 'Lights', 'Food wait', 'Building', 'Hand-over'];
+  const SEG_NAMES = ['Ride', 'Lights', 'Food wait', 'Building', 'Handover'];
   function engineDeadline(e) {
     const p = e.parts, res = e.res, scale = Math.max(40, Math.ceil(((p ? p.total : 0) + 4) / 10) * 10, e.proposed + 6);
     const pc = v => (v / scale * 100).toFixed(2);
     let x = 0;
     const segs = p ? SEG_NAMES.map((n, i) => [n, [p.travel, p.signals, p.wait, p.access, p.handover][i]]).map(([n, v], i) => {
       const left = x; x += v;
-      return `<div class="seg p${i}" data-w="${pc(v)}" style="left:${pc(left)}%;width:0"><span>${n} ${Math.round(v * 10) / 10}</span></div>`;
+      return `<div class="seg p${i}" data-w="${pc(v)}" style="left:${pc(left)}%;width:0"><span><em>${n} </em>${Math.round(v * 10) / 10}</span></div>`;
     }).join('') : `<div style="position:absolute;left:.6rem;top:50%;transform:translateY(-50%);font-size:.74rem;color:#8995A1;font-style:italic">${res && res.status === 'HOLD' ? 'Not calculated: inputs are stale' : 'Not checked yet'}</div>`;
     const gap = p && res.floor > e.proposed ? `<div class="gap-mark" style="left:${pc(e.proposed)}%;width:${pc(res.floor - e.proposed)}%">${res.floor - e.proposed} min short</div>` : '';
     let ticks = '';
@@ -206,7 +206,7 @@
       <div class="bars"><div class="lbl"><b>AI says</b>simulated</div><div class="track"><div class="seg ai" data-w="${pc(e.proposed)}" style="left:0;width:0"><span>${e.proposed} min → ${clock(e.proposed)}</span></div>${gap}</div>
       <div class="lbl"><b>Real trip</b>legal speed + stops</div><div class="track">${segs}</div>
       <div></div><div class="axis">${ticks}</div></div>
-      ${p ? `<div class="formula">Ride ${Math.round(p.travel * 10) / 10} + Lights ${p.signals} + Food wait ${p.wait} + Building ${p.access} + Hand-over ${p.handover} = <b>${p.total} min</b></div>` : ''}
+      ${p ? `<div class="formula">Ride ${Math.round(p.travel * 10) / 10} + Lights ${p.signals} + Food wait ${p.wait} + Building ${p.access} + Handover ${p.handover} = <b>${p.total} min</b></div>` : ''}
       <div class="publish">${pub}</div></div>${trace(e.trace)}</div>`;
   }
 
@@ -323,14 +323,14 @@
     const p = h.parts, scale = 40, pc = v => (v / scale * 100).toFixed(2);
     let x = 0;
     const segs = SEG_NAMES.map((n, i) => { const v = [p.travel, p.signals, p.wait, p.access, p.handover][i], left = x; x += v;
-      return `<div class="seg p${i}" data-w="${pc(v)}" style="left:${pc(left)}%;width:0"><span>${n} ${v}</span></div>`; }).join('');
+      return `<div class="seg p${i}" data-w="${pc(v)}" style="left:${pc(left)}%;width:0"><span><em>${n} </em>${v}</span></div>`; }).join('');
     let ticks = '';
     for (let m = 0; m <= scale; m += 10) ticks += `<span style="left:${pc(m)}%">${m} min</span>`;
     const real = h.stage >= 2 ? `<div class="be-real"><div class="be-grid"><div><h4>What the trip really takes</h4>
         <div class="bars"><div class="lbl"><b>AI time</b></div><div class="track"><div class="seg ai" data-w="${pc(h.ai)}" style="left:0;width:0"><span>${h.ai} min</span></div>
           <div class="gap-mark" style="left:${pc(h.ai)}%;width:${pc(p.total - h.ai)}%">${p.total - h.ai} min short</div></div>
         <div class="lbl"><b>Real trip</b></div><div class="track">${segs}</div><div></div><div class="axis">${ticks}</div></div>
-        <p class="be-sum">${p.travel} + ${p.signals} + ${p.wait} + ${p.access} + ${p.handover} = <b>${p.total} min</b></p></div>
+        <p class="be-sum">Ride ${p.travel} + Lights ${p.signals} + Food wait ${p.wait} + Building ${p.access} + Handover ${p.handover} = <b>${p.total} min</b></p></div>
         <div class="be-speed">${speedo({kmh: h.speed.need, limit: h.speed.legal, label: 'Needed to reach ' + clock(h.ai)})}
           <p>Only <b>${h.speed.rideLeft} min</b> left to ride ${h.speed.km} km</p></div></div>
         <div class="be-q">Who makes up the missing ${p.total - h.ai} minutes?</div>
@@ -465,7 +465,7 @@
   function sandboxForm(v) {
     const n = (k, label) => `<div class="f"><label for="sb-${k}">${label}</label><input type="number" min="0" step="1" id="sb-${k}" data-sb="${k}" value="${v[k]}"></div>`;
     const c = (k, label) => `<label class="ck"><input type="checkbox" data-sb="${k}" ${v[k] ? 'checked' : ''}> ${label}</label>`;
-    return `<div class="sb-form"><h4>Dispatch</h4>${n('proposed', 'AI proposed (min)')}${n('distance', 'Distance (km)')}${n('legalSpeed', 'Legal speed (km/h)')}${n('conditionSpeed', 'Speed in conditions')}${n('signals', 'Signals (min)')}${n('wait', 'Restaurant wait')}${n('access', 'Building access')}${n('handover', 'Hand-over')}${c('fresh', 'Route data is current')}
+    return `<div class="sb-form"><h4>Dispatch</h4>${n('proposed', 'AI proposed (min)')}${n('distance', 'Distance (km)')}${n('legalSpeed', 'Legal speed (km/h)')}${n('conditionSpeed', 'Speed in conditions')}${n('signals', 'Signals (min)')}${n('wait', 'Restaurant wait')}${n('access', 'Building access')}${n('handover', 'Handover')}${c('fresh', 'Route data is current')}
       <h4>Delivery</h4>${n('arrivalAfter', 'Arrives after deadline (min)')}${n('outside', 'Verified outside delay (min)')}${c('riderCause', 'Reliable rider-cause record')}${c('safeRoute', 'Verified safe legal detour')}${c('complete', 'Cause record complete')}
       <button class="btn-line" data-act="sb-reset">Back to slide values</button></div>`;
   }
