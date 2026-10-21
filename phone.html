@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>RTPL · Try it on a phone</title>
+<meta name="description" content="Tap through one delivery on a phone. The real RTPL rules decide every outcome. Synthetic data only.">
+<link rel="stylesheet" href="./assets/phone.css">
+</head>
+<body>
+<div class="pg">
+  <aside class="side intro">
+    <a class="back" href="./">← Back to the presentation</a>
+    <h1>Try RTPL on a phone</h1>
+    <p class="lead">RTPL has no app of its own. It runs inside the delivery platform and shows up in three places. Tap anything: the real RTPL rules decide what happens.</p>
+    <ul class="who">
+      <li><b class="ic rider"></b><div><strong>Rider app</strong><span>Sees a checked time and why, reports delays, asks for review.</span></div></li>
+      <li><b class="ic eats"></b><div><strong>Customer app</strong><span>Gets the same arrival time. Nothing private.</span></div></li>
+      <li><b class="ic review"></b><div><strong>Reviewer console</strong><span>A person decides appeals and must give a reason.</span></div></li>
+    </ul>
+    <h2>Try these</h2>
+    <ol class="try">
+      <li>Accept, pick up, deliver: on time.</li>
+      <li>Stop for 10 min, deliver, then ask for review and play the reviewer.</li>
+      <li>Get stuck in traffic with no record: still protected.</li>
+      <li>Road closed, then a shortcut: the time is kept.</li>
+      <li>Settings → route data out of date: dispatch is held.</li>
+    </ol>
+    <button type="button" class="restart" data-act="restart">Start over</button>
+    <p class="fine">Made-up app, order and city. Rules run live from <a href="./rtpl-core.js">rtpl-core.js</a>; the AI proposal, evidence labels and reviewer authority are simulated.</p>
+  </aside>
+
+  <div class="device-wrap" id="wrap">
+    <div class="device" id="device">
+      <div class="notch"></div>
+      <div class="screen">
+        <div class="status"><span id="sb-time">12:00</span><span class="sb-r">5G <i></i><i></i><i></i> <b></b></span></div>
+        <div class="toast" id="toast" hidden></div>
+        <div class="view" id="view"></div>
+        <button type="button" class="homebar" data-open="home" aria-label="Home"></button>
+      </div>
+    </div>
+  </div>
+
+  <aside class="side log">
+    <h2>What RTPL decided <small>live</small></h2>
+    <ol id="log"></ol>
+  </aside>
+</div>
+
+<script src="./rtpl-core.js"></script>
+<script src="./app/phone-model.js"></script>
+<script src="./app/phone.js"></script>
+</body>
+</html>
