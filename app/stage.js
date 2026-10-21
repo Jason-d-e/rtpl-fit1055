@@ -1,8 +1,8 @@
 /* The opening of the talk, staged like a product launch:
  *   0  splash   — black screen, one rider icon. A click or → starts the show.
  *   1  film     — a night city, a rider rides in, the order's route and times flash up on the beat,
- *                 and the title RTPL lands on the music's drop (about 15 s).
- *   2  team     — six cards arrive on the beat, dimmed. Two bars later they flip and light up together
+ *                 and the title RTPL lands on the music's drop (about 7 s).
+ *   2  team     — six cards arrive on the beat, dimmed. One bar later they flip and light up together
  *                 by themselves (→ does it at once), and the music drops low while the members introduce themselves.
  *   3  cover    — a rider sweeps across and the night scene wipes into PPT page 1; the title and names fly
  *                 to where they sit on that page, and the song plays its own ending.
@@ -100,6 +100,14 @@
   }
   function hint(t) { $('sh-hint').textContent = t || ''; }
   function chosenTrack() { try { return localStorage.getItem(TRACK_KEY) || 'higher-up'; } catch (e) { return 'higher-up'; } }
+  // The film starts 16 beats (about 7 s) before the song's drop, so the title lands quickly.
+  function filmFrom(t) { return t.drop - Math.min(t.drop - t.start, 16 * 60 / t.bpm); }
+  // Load the chosen track while the splash shows, already at the film's start point, so the film starts on time.
+  function prime() {
+    const t = M.track === M.TRACKS[chosenTrack()] ? M.track : M.use(chosenTrack());
+    M.cue(filmFrom(t));
+    return t;
+  }
   function markTrack(id) { document.querySelectorAll('[data-track]').forEach(b => b.classList.toggle('on', b.dataset.track === id)); }
 
   /* ---------- 0 splash ---------- */
@@ -109,6 +117,7 @@
     gsap.set('#sh-title', {xPercent: -50, yPercent: -50});
     gsap.set('#sh-team', {xPercent: -50});
     markTrack(chosenTrack());
+    prime();
     gsap.set('#sh-splash', {autoAlpha: 1});
     gsap.fromTo('#sh-go', {scale: .85, autoAlpha: 0}, {scale: 1, autoAlpha: 1, duration: 1.6, ease: 'power3.out'});
     hint('Click the rider or press → to start');
@@ -117,9 +126,10 @@
   /* ---------- 1 film, built on the beat ---------- */
   function film() {
     ST.phase = 'film';
-    const t = M.use(chosenTrack()), beat = 60 / t.bpm, D = t.drop - t.start;   // D: the drop, ~15 s in
+    // D: the drop, counted from where the film starts in the song.
+    const t = prime(), beat = 60 / t.bpm, from = filmFrom(t), D = t.drop - from, skip = from - t.start;
     hint('');
-    M.play();
+    M.play(from);
     const tl = gsap.timeline({paused: true});
     ST.tl = tl;
     tl.to('#sh-splash', {autoAlpha: 0, scale: 1.08, duration: .8, ease: 'power2.in'}, 0)
@@ -127,7 +137,7 @@
       .fromTo('.sh-city .far', {x: 0}, {x: -900, duration: D + 30, ease: 'none'}, 0)
       .fromTo('.sh-city .near', {x: 0}, {x: -1700, duration: D + 30, ease: 'none'}, 0)
       .fromTo('.sh-city .lane', {x: 0}, {x: -1960, duration: (D + 30) / 3, ease: 'none', repeat: 2}, 0)
-      .fromTo('#sh-rider', {xPercent: -160, x: 0}, {xPercent: 0, x: 0, duration: 4 * beat * 2, ease: 'power3.out'}, 1.2)
+      .fromTo('#sh-rider', {xPercent: -160, x: 0}, {xPercent: 0, x: 0, duration: 4 * beat, ease: 'power3.out'}, .6)
       .to('#sh-rider .wheel', {rotation: 360 * 40, transformOrigin: '50% 50%', duration: D + 30, ease: 'none'}, 0)
       .fromTo('#sh-rider', {y: 0}, {y: -4, duration: beat / 2, yoyo: true, repeat: Math.ceil(D / beat) * 2, ease: 'sine.inOut'}, 0);
     // The route draws, then the times slam in on the beats before the drop.
@@ -150,21 +160,27 @@
       .fromTo('#sh-title b i', {scale: 0}, {scale: 1, duration: .4, ease: 'back.out(4)'}, D + .3)
       .fromTo('#sh-title span', {autoAlpha: 0, y: 20}, {autoAlpha: 1, y: 0, duration: .6}, D + .5)
       .fromTo('#sh-film', {x: -16}, {x: 16, duration: .05, repeat: 7, yoyo: true, ease: 'none'}, D).set('#sh-film', {x: 0}, D + .42);
-    // Two bars later: the title rises, the rider moves aside, the team arrives one card per beat.
-    const T = D + 8 * beat;
+    // One bar later: the title rises, the rider moves aside, the team arrives two cards per beat.
+    const T = D + 4 * beat;
     tl.to('#sh-title', {y: '-30vh', scale: .55, duration: 1.1, ease: 'power3.inOut'}, T)
       .to('#sh-rider', {xPercent: 140, autoAlpha: 0, duration: 1.4, ease: 'power3.in'}, T)
       .to('#sh-hud', {autoAlpha: 0, duration: .3}, T)
-      .fromTo('.sh-tlabel', {autoAlpha: 0, y: 20}, {autoAlpha: 1, y: 0, duration: .6}, T + .6)
-      .fromTo('.tm', {autoAlpha: 0, y: 80, rotationX: -40}, {autoAlpha: 1, y: 0, rotationX: 0, duration: .7, ease: 'back.out(1.6)', stagger: beat}, T + 4 * beat)
-      .call(() => { ST.phase = 'team'; teamIdle(); }, null, T + 4 * beat + 6 * beat)
-      // Two bars after the last card lands, the whole team lights up on its own.
-      .call(() => { if (ST.phase === 'team') teamTogether(); }, null, T + 4 * beat + 6 * beat + 8 * beat);
-    // Run the timeline on the music's clock, so the picture stays on the beat (or on the wall clock without sound).
+      .fromTo('.sh-tlabel', {autoAlpha: 0, y: 20}, {autoAlpha: 1, y: 0, duration: .5}, T + .4)
+      .fromTo('.tm', {autoAlpha: 0, y: 80, rotationX: -40}, {autoAlpha: 1, y: 0, rotationX: 0, duration: .6, ease: 'back.out(1.6)', stagger: beat / 2}, T + 2 * beat)
+      .call(() => { ST.phase = 'team'; teamIdle(); }, null, T + 2 * beat + 4 * beat)
+      // One bar after the last card lands, the whole team lights up on its own.
+      .call(() => { if (ST.phase === 'team') teamTogether(); }, null, T + 2 * beat + 4 * beat + 4 * beat);
+    // Run the timeline on the music's clock, so the picture stays on the beat. While the music is still
+    // starting the picture waits; with no sound (muted, blocked, or still silent after 2 s) it runs on the wall
+    // clock from where it is. It never jumps backwards.
     const t0 = performance.now();
+    let wall = null, last = 0;
     const tick = () => {
-      const p = M.position();
-      tl.time(p !== null && p > 0 ? p : (performance.now() - t0) / 1000, false);
+      const p = M.position(), waited = (performance.now() - t0) / 1000;
+      if (wall === null && (p === null || (p - skip <= 0 && waited > 2))) wall = performance.now() - last * 1000;
+      const now = wall !== null ? (performance.now() - wall) / 1000 : Math.max(0, p - skip);
+      last = Math.max(last, now);
+      tl.time(last, false);
       if (ST.tl === tl && tl.time() < tl.duration()) ST.raf = requestAnimationFrame(tick);
     };
     ST.raf = requestAnimationFrame(tick);
@@ -323,7 +339,7 @@
   document.addEventListener('click', e => {
     if (ST.phase === 'off') return;
     const tb = e.target.closest('[data-track]');
-    if (tb) { try { localStorage.setItem(TRACK_KEY, tb.dataset.track); } catch (err) { /* this visit only */ } markTrack(tb.dataset.track); return; }
+    if (tb) { try { localStorage.setItem(TRACK_KEY, tb.dataset.track); } catch (err) { /* this visit only */ } markTrack(tb.dataset.track); prime(); return; }
     if (e.target.closest('#sh-go')) next();
   });
 

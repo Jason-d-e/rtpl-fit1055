@@ -11,7 +11,7 @@
  * Sound effects (CC0): air whoosh by Almitory (OpenGameArt), impacts by Kenney (kenney.nl). */
 (function (root) {
   'use strict';
-  // start: where the opening film begins in the song; drop: where the title lands (start + ~15 s);
+  // start: where the opening film begins in the song; drop: where the title lands (the film starts 16 beats before it);
   // outro: where the song's own ending starts (about 7 s before the sound stops).
   const TRACKS = {
     'higher-up':         {name: 'Higher Up', by: 'Shane Ivers', src: './assets/music/higher-up.mp3', bpm: 130, start: 0, drop: 14.77, outro: 186.4},
@@ -50,6 +50,8 @@
       main = audio(track.src); main._v = 0; main.volume = 0;
       return track;
     },
+    // Move the (silent, not yet playing) track to a point, so the browser buffers from there ahead of play().
+    cue(from) { if (main && main.paused) { try { main.currentTime = from; } catch (e) { /* not loaded yet */ } } },
     // Start the opening music (from a key press or click, which browsers require before any sound).
     play(from) {
       if (!main) Music.use();
