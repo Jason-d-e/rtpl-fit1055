@@ -992,3 +992,7 @@ body.calm .banner { animation: none; }
 .cc-qr span { font-size: .85rem; color: #9FAAB5; display: flex; flex-direction: column; gap: .2rem; }
 .cc-qr b { color: #FFC20E; font-size: .95rem; }
 .cc-rider { bottom: 2%; }
+
+/* Always-visible way into the interactive phone prototype (phone.html), above the show and the intro. */
+.try-phone { position: fixed; top: .8rem; right: .8rem; z-index: 200; display: inline-flex; align-items: center; gap: .4rem; padding: .45rem .85rem; border-radius: 999px; background: #FFC20E; color: #1F262D; font-weight: 700; font-size: .8rem; text-decoration: none; box-shadow: 0 6px 18px rgba(0, 0, 0, .3); }
+.try-phone:hover { background: #fff; }

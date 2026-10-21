@@ -209,12 +209,23 @@
       <p class="priv">Teaching prototype. The app, order, restaurant and city are made up; the AI proposal is simulated.</p></div>`;
   }
 
+  // The safeguard, its pseudocode line (02 ethics and pseudocode) and its ethical basis, shown beside each decision.
+  const RULES = {
+    P01: {name: 'Data quality gate', code: 'IF route or safety data is stale:\n  HOLD dispatch; publish no time', ethic: 'Deontology · do not cause avoidable harm'},
+    P02: {name: 'Safe time floor', code: 'deadline = MAX(ai_proposal, legal_floor)\nnew = MAX(accepted, recheck)  # never earlier', ethic: 'ACM 1.2 · no avoidable time pressure'},
+    P03: {name: 'Honest delay credit', code: 'credit = UNION(verified delays) − already_covered', ethic: 'ACM 1.4 · fair, no double counting'},
+    P04: {name: 'Evidence before blame', code: 'IF cause record incomplete: PROTECT rider\nELSE: assessment ELIGIBLE, nothing applied', ethic: 'Deontology · lateness ≠ responsibility'},
+    P05: {name: 'Safety is never punished', code: 'IF verified legal safe detour: PROTECT rider', ethic: 'Deontology · safety before speed'},
+    P06: {name: 'Right to correction', code: 'ON appeal: SUSPEND all 4 effects\nREQUIRE authority AND reason ≥ 12 chars', ethic: 'ACM 1.3 / 3.4 · virtue: reasoned human review'},
+    P07: {name: 'Minimal disclosure', code: 'EXPORT version, rule, outcome\nNEVER identity, GPS, raw evidence', ethic: 'Privacy · scrutiny without exposure'}
+  };
+
   /* ---------- render ---------- */
   function render() {
     $('view').innerHTML = {home, rider, customer, review, settings}[ui.app]();
     $('view').className = 'view ' + ui.app;
     $('sb-time').textContent = clock(S.now);
-    $('log').innerHTML = S.log.map(l => `<li class="${l.tone}"><time>${l.at}</time>${l.rule !== '—' ? `<span class="rule">${l.rule}</span>` : ''}<p>${esc(l.text)}</p></li>`).join('');
+    $('log').innerHTML = S.log.map(l => { const r = RULES[l.rule]; return `<li class="${l.tone}"><time>${l.at}</time>${r ? `<span class="rule">${l.rule}</span> <b class="sg">${r.name}</b>` : ''}<p>${esc(l.text)}</p>${r ? `<pre class="pc">${esc(r.code)}</pre><small class="eth">${r.ethic}</small>` : ''}</li>`; }).join('');
   }
 
   document.addEventListener('click', e => {
@@ -225,6 +236,7 @@
     if (t.dataset.outcome) { ui.outcome = t.dataset.outcome; return render(); }
     const a = t.dataset.act, min = +t.dataset.min;
     if (a === 'restart') return restart();
+    if (a === 'fidelity') { document.body.classList.toggle('lofi', t.dataset.v === 'lo'); document.querySelectorAll('[data-act="fidelity"]').forEach(b => b.classList.toggle('on', b === t)); return; }
     if (a === 'kitchenLate' || a === 'stop' || a === 'jam') return act(a, {minutes: min});
     if (a === 'appeal') return act('appeal', {message: ui.message});
     if (a === 'review') return act('review', {authorised: ui.auth, outcome: ui.outcome, reason: ui.reason});

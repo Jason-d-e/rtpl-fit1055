@@ -222,7 +222,7 @@ blockquote small { display: block; font-size: .68rem; color: var(--muted); margi
 @media (max-width: 1100px) {
   .pg { grid-template-columns: auto; }
   .intro { order: 0; max-width: 32rem; max-height: none; }
-  .device-wrap { order: 1; justify-self: center; }
+  .device-wrap { order: -1; justify-self: center; }
   .log { order: 2; max-width: 32rem; max-height: none; width: 100%; justify-self: center; }
 }
 @media (max-width: 640px) {
@@ -240,3 +240,20 @@ blockquote small { display: block; font-size: .68rem; color: var(--muted); margi
 .stars button { border: 0; background: none; font-size: 1.9rem; line-height: 1; color: var(--line); padding: .1rem; transition: transform .1s; }
 .stars button.on { color: var(--signal); }
 .stars button:active { transform: scale(1.2); }
+
+/* pseudocode + ethics beside each decision */
+.log .sg { font-size: .78rem; }
+.log .pc { margin: .4rem 0 .25rem; font-family: var(--mono); font-size: .68rem; line-height: 1.45; background: var(--asphalt); color: #D7F3E8; border-radius: 8px; padding: .4rem .5rem; white-space: pre-wrap; }
+.log .eth { display: inline-block; font-size: .68rem; font-weight: 700; color: var(--suspend); background: var(--suspend-soft); border-radius: 6px; padding: .05rem .4rem; }
+
+/* low-fi sketch / high-fi switch */
+.fid { display: flex; align-items: center; gap: .3rem; margin-top: 1rem; font-size: .8rem; font-weight: 700; }
+.fid span { margin-right: .3rem; }
+.fid button { border: 1px solid var(--asphalt); background: transparent; border-radius: 999px; padding: .3rem .7rem; font-size: .78rem; font-weight: 700; }
+.fid button.on { background: var(--asphalt); color: #fff; }
+.lofi .screen { filter: grayscale(1) contrast(1.1); background: #fff; }
+.lofi .screen, .lofi .screen button, .lofi .screen textarea { font-family: 'Segoe Print', 'Comic Sans MS', 'Bradley Hand', cursive; }
+.lofi .view.home { background: #fff; color: #222; }
+.lofi .app, .lofi .h-clock { color: #222; text-shadow: none; }
+.lofi .card, .lofi .btn, .lofi .ic, .lofi .h-card, .lofi .c-shop, .lofi .ab, .lofi .opt button, .lofi .stats div { background: #fff !important; color: #222 !important; border: 2px dashed #444 !important; box-shadow: none !important; }
+.lofi .ic svg { opacity: .55; }

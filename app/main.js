@@ -895,6 +895,7 @@
     else if (k === 'r' || k === 'R') go(st.i, 0, true);
     else if (k === 'n' || k === 'N') toggleNotes();
     else if (k === 'm' || k === 'M') A.toggle();
+    else if (k === 'p' || k === 'P') window.open('./phone.html', '_blank', 'noopener');
     else if (k === 'l' || k === 'L') setLooping(!st.looping);
     // K, or a clicker's blank-screen button (it sends B or .), pauses and resumes.
     else if (k === 'k' || k === 'K' || k === 'b' || k === 'B' || k === '.') setPaused(!st.paused);
