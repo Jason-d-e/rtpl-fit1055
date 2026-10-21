@@ -8,6 +8,10 @@
 <link rel="stylesheet" href="./assets/app.css">
 </head>
 <body>
+<style>/* Always-visible way into the interactive phone prototype, above the show and the intro (inline so a cached app.css cannot hide it). */
+.try-phone { position: fixed; top: .8rem; right: .8rem; z-index: 200; display: inline-flex; align-items: center; gap: .4rem; padding: .45rem .85rem; border-radius: 999px; background: #FFC20E; color: #1F262D; font-weight: 700; font-size: .8rem; text-decoration: none; box-shadow: 0 6px 18px rgba(0, 0, 0, .3); }
+.try-phone:hover { background: #fff; }
+</style>
 <a class="try-phone" href="./phone.html" target="_blank" rel="noopener" title="Open the interactive phone prototype (P)"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><rect x="4" y="1" width="8" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="8" cy="12.3" r=".9" fill="currentColor"/></svg>Try it on a phone</a>
 <div class="site" id="site">
 <header class="bar">
